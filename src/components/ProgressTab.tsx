@@ -7,6 +7,7 @@ import { useStore, type WeightEntry } from "@/lib/store";
 import { todayISO } from "@/lib/time";
 import { Card, ProgressBar, SectionTitle } from "./ui";
 import { TrainingCalendar } from "./TrainingCalendar";
+import { BodyMetricsTab } from "./BodyMetricsTab";
 
 export function ProgressTab() {
   const { state, saveWeight, removeWeight, exportJSON, importJSON, resetAll } = useStore();
@@ -125,6 +126,8 @@ export function ProgressTab() {
           La bioimpedancia estima la composición corporal y puede variar con la hidratación, las comidas y el ejercicio reciente. Usa estos datos como referencia, no como diagnóstico. El objetivo es reducir grasa progresivamente, conservar músculo y mejorar la recuperación.
         </p>
       </Card>
+
+      <BodyMetricsTab />
 
       <TrainingCalendar />
 
