@@ -1,14 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { PROFILE, WEEKDAYS, weekdayFromDate, type Weekday } from "@/lib/config";
 import { TAPERS } from "@/lib/data";
 import { mealsForDay, totals, type WeekdayWithTaper } from "@/lib/nutrition";
 import { Card, DayPicker, ProgressBar, SectionTitle } from "./ui";
+import { useStore } from "@/lib/store";
+import { todayISO } from "@/lib/time";
 
 const TAPER_DAYS = WEEKDAYS.filter((d): d is WeekdayWithTaper => d !== "Sábado");
 
 export function NutritionTab() {
+  const { state, addNutritionEntry, removeNutritionEntry } = useStore();
+  const [date, setDate] = useState(todayISO());
+  const [foodName, setFoodName] = useState("");
+  const [foodKcal, setFoodKcal] = useState("");
+  const [foodProtein, setFoodProtein] = useState("");
+  const [logMessage, setLogMessage] = useState("");
   const [day, setDay] = useState<WeekdayWithTaper>("Lunes");
 
   useEffect(() => {
@@ -19,6 +28,40 @@ export function NutritionTab() {
   const meals = mealsForDay(day);
   const t = totals(meals);
   const kcalGap = PROFILE.kcalTarget - t.kcal;
+  const loggedFoods = state.nutritionEntries[date] ?? [];
+  const consumed = useMemo(
+    () => loggedFoods.reduce((acc, food) => ({ kcal: acc.kcal + food.kcal, protein: acc.protein + food.protein }), { kcal: 0, protein: 0 }),
+    [loggedFoods],
+  );
+
+  const addFood = () => {
+    const name = foodName.trim();
+    const kcal = Number(foodKcal);
+    const protein = Number(foodProtein || 0);
+    if (!name) {
+      setLogMessage("Escribe el nombre del alimento o comida.");
+      return;
+    }
+    if (!Number.isFinite(kcal) || kcal < 0 || kcal > 5000) {
+      setLogMessage("Introduce calorías válidas entre 0 y 5000.");
+      return;
+    }
+    if (!Number.isFinite(protein) || protein < 0 || protein > 400) {
+      setLogMessage("Introduce proteína válida entre 0 y 400 g.");
+      return;
+    }
+    addNutritionEntry({
+      id: `${date}-${Date.now()}`,
+      date,
+      name,
+      kcal: Math.round(kcal),
+      protein: Math.round(protein * 10) / 10,
+    });
+    setFoodName("");
+    setFoodKcal("");
+    setFoodProtein("");
+    setLogMessage("Alimento registrado.");
+  };
 
   return (
     <div className="space-y-6">
