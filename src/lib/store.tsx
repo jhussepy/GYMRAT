@@ -166,8 +166,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const saveBodyMeasurement = useCallback((entry: BodyMeasurementEntry) => {
     setState((s) => {
+      const existing = s.bodyMeasurements.find((m) => m.date === entry.date);
+      // Los campos opcionales ausentes no deben borrar mediciones guardadas.
+      // Los valores que sí llegan en entry (incluido el peso) actualizan el registro.
+      const merged: BodyMeasurementEntry = { ...existing, ...entry };
       const rest = s.bodyMeasurements.filter((m) => m.date !== entry.date);
-      return { ...s, bodyMeasurements: [...rest, entry].sort((a, b) => a.date.localeCompare(b.date)) };
+      return { ...s, bodyMeasurements: [...rest, merged].sort((a, b) => a.date.localeCompare(b.date)) };
     });
   }, []);
 
