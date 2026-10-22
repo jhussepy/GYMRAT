@@ -8,8 +8,19 @@ import { mealsForDay, totals, type WeekdayWithTaper } from "@/lib/nutrition";
 import { Card, DayPicker, ProgressBar, SectionTitle } from "./ui";
 import { useStore } from "@/lib/store";
 import { todayISO } from "@/lib/time";
+import { FOOD_CATALOG, nutritionForGrams } from "@/lib/food-catalog";
 
 const TAPER_DAYS = WEEKDAYS.filter((d): d is WeekdayWithTaper => d !== "Sábado");
+
+function isValidLoggingDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day
+    && value <= todayISO();
+}
 
 export function NutritionTab() {
   const { state, addNutritionEntry, removeNutritionEntry } = useStore();
@@ -17,6 +28,8 @@ export function NutritionTab() {
   const [foodName, setFoodName] = useState("");
   const [foodKcal, setFoodKcal] = useState("");
   const [foodProtein, setFoodProtein] = useState("");
+  const [catalogFoodId, setCatalogFoodId] = useState(FOOD_CATALOG[0]?.id ?? "");
+  const [foodGrams, setFoodGrams] = useState("100");
   const [logMessage, setLogMessage] = useState("");
   const [day, setDay] = useState<WeekdayWithTaper>("Lunes");
 
@@ -29,12 +42,21 @@ export function NutritionTab() {
   const t = totals(meals);
   const kcalGap = PROFILE.kcalTarget - t.kcal;
   const loggedFoods = state.nutritionEntries[date] ?? [];
+  const selectedCatalogFood = FOOD_CATALOG.find((food) => food.id === catalogFoodId);
+  const grams = Number(foodGrams);
+  const catalogMacros = selectedCatalogFood && Number.isFinite(grams) && grams > 0 && grams <= 5000
+    ? nutritionForGrams(selectedCatalogFood, grams)
+    : null;
   const consumed = useMemo(
     () => loggedFoods.reduce((acc, food) => ({ kcal: acc.kcal + food.kcal, protein: acc.protein + food.protein }), { kcal: 0, protein: 0 }),
     [loggedFoods],
   );
 
   const addFood = () => {
+    if (!isValidLoggingDate(date)) {
+      setLogMessage(!date ? "Selecciona una fecha para registrar el alimento." : date > todayISO() ? "No puedes registrar alimentos en una fecha futura." : "La fecha seleccionada no es válida.");
+      return;
+    }
     const name = foodName.trim();
     const kcal = Number(foodKcal);
     const protein = Number(foodProtein || 0);
@@ -63,6 +85,30 @@ export function NutritionTab() {
     setLogMessage("Alimento registrado.");
   };
 
+  const addCatalogFood = () => {
+    if (!isValidLoggingDate(date)) {
+      setLogMessage(!date ? "Selecciona una fecha para registrar el alimento." : date > todayISO() ? "No puedes registrar alimentos en una fecha futura." : "La fecha seleccionada no es válida.");
+      return;
+    }
+    if (!selectedCatalogFood) {
+      setLogMessage("Selecciona un alimento del catálogo.");
+      return;
+    }
+    if (!Number.isFinite(grams) || grams <= 0 || grams > 5000) {
+      setLogMessage("Introduce una cantidad entre 1 y 5000 gramos.");
+      return;
+    }
+    const macros = nutritionForGrams(selectedCatalogFood, grams);
+    addNutritionEntry({
+      id: `${date}-catalog-${Date.now()}`,
+      date,
+      name: `${selectedCatalogFood.label} (${grams} g)`,
+      kcal: macros.kcal,
+      protein: macros.protein,
+    });
+    setLogMessage("Alimento del catálogo registrado con valores estimados.");
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -71,6 +117,28 @@ export function NutritionTab() {
           Fecha del registro
           <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setLogMessage(""); }} max={todayISO()} className="mt-1 block h-11 rounded-sm border border-line bg-ink px-3 text-chalk" />
         </label>
+        <div className="mt-4 rounded-xl border border-line/70 bg-ink/15 p-4">
+          <h3 className="font-medium">Añadir desde el catálogo</h3>
+          <p className="mt-1 text-sm text-muted">Selecciona un alimento y su peso en gramos para estimar automáticamente calorías y proteína.</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(120px,1fr)_minmax(180px,1fr)_auto] lg:items-end">
+            <label className="text-sm text-muted">
+              Alimento
+              <select value={catalogFoodId} onChange={(e) => setCatalogFoodId(e.target.value)} className="mt-1 block h-11 w-full rounded-sm border border-line bg-ink px-3 text-chalk">
+                {FOOD_CATALOG.map((food) => <option key={food.id} value={food.id}>{food.label}</option>)}
+              </select>
+            </label>
+            <label className="text-sm text-muted">
+              Cantidad (g)
+              <input type="number" inputMode="decimal" min="1" max="5000" step="1" value={foodGrams} onChange={(e) => setFoodGrams(e.target.value)} className="mt-1 block h-11 w-full rounded-sm border border-line bg-ink px-3 text-chalk tabular-nums" />
+            </label>
+            <div className="rounded-sm border border-line/70 px-3 py-2 text-sm">
+              <p className="text-muted">Estimación por porción</p>
+              <p className="mt-1 tabular-nums">{catalogMacros ? `${catalogMacros.kcal} kcal · ${catalogMacros.protein} g proteína` : "Introduce gramos válidos"}</p>
+            </div>
+            <button onClick={addCatalogFood} className="min-h-[44px] rounded-sm border border-line px-4 font-medium hover:bg-raised">Registrar alimento</button>
+          </div>
+          {selectedCatalogFood && <p className="mt-2 text-xs text-muted">Base: valores orientativos por 100 g; {selectedCatalogFood.basis}. El producto concreto puede variar.</p>}
+        </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="text-sm text-muted sm:col-span-2 lg:col-span-1">
             Alimento o comida
