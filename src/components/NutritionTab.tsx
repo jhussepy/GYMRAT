@@ -22,6 +22,19 @@ function isValidLoggingDate(value: string): boolean {
     && value <= todayISO();
 }
 
+function lastSevenDates(anchor: string): string[] {
+  const [year, month, day] = anchor.split("-").map(Number);
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(Date.UTC(year, month - 1, day - 6 + index));
+    return date.toISOString().slice(0, 10);
+  });
+}
+
+function formatNutritionDate(value: string): string {
+  const date = new Date(`${value}T12:00:00`);
+  return new Intl.DateTimeFormat("es-ES", { weekday: "short", day: "2-digit", month: "short" }).format(date);
+}
+
 export function NutritionTab() {
   const { state, addNutritionEntry, removeNutritionEntry } = useStore();
   const [date, setDate] = useState(todayISO());
@@ -51,6 +64,33 @@ export function NutritionTab() {
     () => loggedFoods.reduce((acc, food) => ({ kcal: acc.kcal + food.kcal, protein: acc.protein + food.protein }), { kcal: 0, protein: 0 }),
     [loggedFoods],
   );
+  const weeklyNutrition = useMemo(() => {
+    const days = lastSevenDates(todayISO()).map((dayDate) => {
+      const entries = state.nutritionEntries[dayDate] ?? [];
+      const totals = entries.reduce(
+        (acc, entry) => ({ kcal: acc.kcal + entry.kcal, protein: acc.protein + entry.protein }),
+        { kcal: 0, protein: 0 },
+      );
+      return { date: dayDate, entriesCount: entries.length, hasData: entries.length > 0, ...totals };
+    });
+    const recordedDays = days.filter((dayRecord) => dayRecord.hasData);
+    const averageKcal = recordedDays.length
+      ? Math.round(recordedDays.reduce((sum, dayRecord) => sum + dayRecord.kcal, 0) / recordedDays.length)
+      : null;
+    const averageProtein = recordedDays.length
+      ? Math.round((recordedDays.reduce((sum, dayRecord) => sum + dayRecord.protein, 0) / recordedDays.length) * 10) / 10
+      : null;
+    const kcalMin = PROFILE.kcalTarget * 0.9;
+    const kcalMax = PROFILE.kcalTarget * 1.1;
+    return {
+      days,
+      recordedCount: recordedDays.length,
+      averageKcal,
+      averageProtein,
+      daysNearKcalTarget: recordedDays.filter((dayRecord) => dayRecord.kcal >= kcalMin && dayRecord.kcal <= kcalMax).length,
+      daysAtProteinTarget: recordedDays.filter((dayRecord) => dayRecord.protein >= PROFILE.proteinTargetG).length,
+    };
+  }, [state.nutritionEntries]);
 
   const addFood = () => {
     if (!isValidLoggingDate(date)) {
@@ -191,6 +231,63 @@ export function NutritionTab() {
               ))}
             </ul>
           )}
+        </div>
+      </Card>
+
+      <Card>
+        <SectionTitle
+          title="Resumen nutricional · últimos 7 días"
+          hint="Los promedios y el cumplimiento se calculan solo sobre los días con alimentos registrados. Los días sin registros no se interpretan como cero consumo."
+        />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border border-line/70 bg-ink/20 p-4">
+            <p className="text-sm text-muted">Días registrados</p>
+            <p className="mt-1 font-display text-3xl tabular-nums">{weeklyNutrition.recordedCount}<span className="text-base text-muted"> / 7</span></p>
+          </div>
+          <div className="rounded-xl border border-line/70 bg-ink/20 p-4">
+            <p className="text-sm text-muted">Promedio de calorías</p>
+            <p className="mt-1 font-display text-3xl tabular-nums">{weeklyNutrition.averageKcal === null ? "—" : weeklyNutrition.averageKcal.toLocaleString("es-ES")}<span className="text-base text-muted"> kcal</span></p>
+            <p className="mt-1 text-xs text-muted">Meta diaria: {PROFILE.kcalTarget.toLocaleString("es-ES")} kcal</p>
+          </div>
+          <div className="rounded-xl border border-line/70 bg-ink/20 p-4">
+            <p className="text-sm text-muted">Promedio de proteína</p>
+            <p className="mt-1 font-display text-3xl tabular-nums">{weeklyNutrition.averageProtein === null ? "—" : weeklyNutrition.averageProtein.toLocaleString("es-ES")}<span className="text-base text-muted"> g</span></p>
+            <p className="mt-1 text-xs text-muted">Meta diaria: {PROFILE.proteinTargetG} g</p>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-line/70 p-4">
+            <p className="text-sm text-muted">Días dentro de ±10 % de calorías</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums">{weeklyNutrition.recordedCount ? weeklyNutrition.daysNearKcalTarget : "—"}<span className="text-sm font-normal text-muted">{weeklyNutrition.recordedCount ? ` / ${weeklyNutrition.recordedCount} registrados` : " · sin datos"}</span></p>
+            <p className="mt-1 text-xs text-muted">Rango orientativo: {Math.round(PROFILE.kcalTarget * 0.9).toLocaleString("es-ES")}–{Math.round(PROFILE.kcalTarget * 1.1).toLocaleString("es-ES")} kcal.</p>
+          </div>
+          <div className="rounded-xl border border-line/70 p-4">
+            <p className="text-sm text-muted">Días que alcanzaron la meta de proteína</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums">{weeklyNutrition.recordedCount ? weeklyNutrition.daysAtProteinTarget : "—"}<span className="text-sm font-normal text-muted">{weeklyNutrition.recordedCount ? ` / ${weeklyNutrition.recordedCount} registrados` : " · sin datos"}</span></p>
+            <p className="mt-1 text-xs text-muted">Objetivo: al menos {PROFILE.proteinTargetG} g al día.</p>
+          </div>
+        </div>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full min-w-[520px] text-left text-sm">
+            <thead className="text-muted">
+              <tr>
+                <th className="py-2 pr-3 font-normal">Fecha</th>
+                <th className="py-2 pr-3 text-right font-normal">Alimentos</th>
+                <th className="py-2 pr-3 text-right font-normal">Calorías</th>
+                <th className="py-2 text-right font-normal">Proteína</th>
+              </tr>
+            </thead>
+            <tbody>
+              {weeklyNutrition.days.map((dayRecord) => (
+                <tr key={dayRecord.date} className="border-t border-line">
+                  <td className="py-2 pr-3 capitalize">{formatNutritionDate(dayRecord.date)}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{dayRecord.hasData ? dayRecord.entriesCount : "—"}</td>
+                  <td className="py-2 pr-3 text-right tabular-nums">{dayRecord.hasData ? dayRecord.kcal.toLocaleString("es-ES") : "Sin registro"}</td>
+                  <td className="py-2 text-right tabular-nums">{dayRecord.hasData ? `${Math.round(dayRecord.protein * 10) / 10} g` : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </Card>
 
