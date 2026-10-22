@@ -34,7 +34,7 @@ export function NutritionTab() {
                 {t.kcal} de {PROFILE.kcalTarget} kcal
               </span>
             </div>
-            <ProgressBar value={t.kcal} max={PROFILE.kcalTarget} color="#F5B14C" label="Calorías del día" />
+            <ProgressBar value={t.kcal} max={PROFILE.kcalTarget} barClass="bg-amber" label="Calorías del día" />
           </div>
           <div>
             <div className="mb-1.5 flex justify-between text-sm">
@@ -43,7 +43,7 @@ export function NutritionTab() {
                 {t.protein} de {PROFILE.proteinTargetG} g
               </span>
             </div>
-            <ProgressBar value={t.protein} max={PROFILE.proteinTargetG} color="#F76A50" label="Proteína del día" />
+            <ProgressBar value={t.protein} max={PROFILE.proteinTargetG} barClass="bg-flame" label="Proteína del día" />
           </div>
         </div>
         <p className="mt-3 text-sm text-muted">

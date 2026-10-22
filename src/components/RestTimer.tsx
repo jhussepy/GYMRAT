@@ -110,7 +110,7 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
     <TimerContext.Provider value={api}>
       {children}
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/80 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="Cronómetro de descanso">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="Cronómetro de descanso">
           <div className="w-full max-w-sm rounded-xl border border-line bg-panel p-6 text-center">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="font-display text-lg">Descanso entre series</h2>
@@ -120,8 +120,8 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
             </div>
             <div className="relative mx-auto my-4 h-44 w-44">
               <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden="true">
-                <circle cx="60" cy="60" r={R} fill="none" stroke="#51495A" strokeWidth="8" />
-                <circle cx="60" cy="60" r={R} fill="none" stroke={done ? "#F5B14C" : "#F76A50"} strokeWidth="8" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} />
+                <circle cx="60" cy="60" r={R} fill="none" className="stroke-line" strokeWidth="8" />
+                <circle cx="60" cy="60" r={R} fill="none" className={done ? "stroke-amber" : "stroke-flame"} strokeWidth="8" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center font-display text-4xl tabular-nums" aria-live="polite">
                 {done ? "A serie" : `${pad2(Math.floor(remaining / 60))}:${pad2(remaining % 60)}`}

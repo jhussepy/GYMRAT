@@ -14,11 +14,11 @@ export function SectionTitle({ title, hint }: { title: string; hint?: string }) 
   );
 }
 
-export function ProgressBar({ value, max, color = "#F76A50", label }: { value: number; max: number; color?: string; label: string }) {
+export function ProgressBar({ value, max, barClass = "bg-flame", label }: { value: number; max: number; barClass?: string; label: string }) {
   const pct = max > 0 ? Math.min(100, (value / max) * 100) : 0;
   return (
     <div role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={max} aria-valuenow={Math.round(value)} className="h-2 w-full overflow-hidden rounded-sm bg-raised">
-      <div className="h-full transition-[width] duration-300" style={{ width: `${pct}%`, backgroundColor: color }} />
+      <div className={`h-full transition-[width] duration-300 ${barClass}`} style={{ width: `${pct}%` }} />
     </div>
   );
 }

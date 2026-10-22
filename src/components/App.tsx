@@ -11,6 +11,7 @@ import { NutritionTab } from "./NutritionTab";
 import { TradingTab } from "./TradingTab";
 import { LogisticsTab } from "./LogisticsTab";
 import { ProgressTab } from "./ProgressTab";
+import { ThemeToggle } from "./ThemeToggle";
 
 const TABS = [
   { id: "dia", label: "Mi día", icon: Clock3 },
@@ -73,7 +74,9 @@ function Shell() {
               </button>
             ))}
           </nav>
-          <span className="hidden lg:block" />
+          <div className="justify-self-end">
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 

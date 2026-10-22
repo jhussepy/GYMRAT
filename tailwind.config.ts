@@ -1,22 +1,25 @@
 import type { Config } from "tailwindcss";
 
+/** Los colores salen de variables CSS (ver globals.css) para soportar modo claro y oscuro. */
+const token = (name: string) => `rgb(var(--${name}) / <alpha-value>)`;
+
 const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        ink: "#1E1A22",
-        panel: "#2A252F",
-        raised: "#34303A",
-        line: "#51495A",
-        chalk: "#F4F1EE",
-        muted: "#B3ABB8",
-        flame: "#F76A50",
-        amber: "#F5B14C",
-        rose: "#FF6B8A",
-        sky: "#7FB6E0",
-        dusk: "#A58BD9",
-        steel: "#6C7FA6",
+        ink: token("ink"),
+        panel: token("panel"),
+        raised: token("raised"),
+        line: token("line"),
+        chalk: token("chalk"),
+        muted: token("muted"),
+        flame: token("flame"),
+        amber: token("amber"),
+        rose: token("rose"),
+        sky: token("sky"),
+        dusk: token("dusk"),
+        steel: token("steel"),
       },
       fontFamily: {
         display: ["'Oswald Variable'", "Oswald", "'Arial Narrow'", "sans-serif"],

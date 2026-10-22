@@ -155,24 +155,24 @@ function WeightChart({ weights }: { weights: WeightEntry[] }) {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Gráfico de tu peso en el tiempo">
-      <line x1={pad.l} x2={W - pad.r} y1={y(PROFILE.goalWeightKg)} y2={y(PROFILE.goalWeightKg)} stroke="#F76A50" strokeDasharray="5 5" />
-      <text x={pad.l + 4} y={y(PROFILE.goalWeightKg) - 5} fill="#F76A50" fontSize="11">
+      <line x1={pad.l} x2={W - pad.r} y1={y(PROFILE.goalWeightKg)} y2={y(PROFILE.goalWeightKg)} className="stroke-flame" strokeDasharray="5 5" />
+      <text x={pad.l + 4} y={y(PROFILE.goalWeightKg) - 5} className="fill-flame" fontSize="11">
         Meta {PROFILE.goalWeightKg} kg
       </text>
-      <line x1={pad.l} x2={W - pad.r} y1={y(PROFILE.startWeightKg)} y2={y(PROFILE.startWeightKg)} stroke="#51495A" strokeDasharray="2 4" />
-      <text x={pad.l + 4} y={y(PROFILE.startWeightKg) - 5} fill="#B3ABB8" fontSize="11">
+      <line x1={pad.l} x2={W - pad.r} y1={y(PROFILE.startWeightKg)} y2={y(PROFILE.startWeightKg)} className="stroke-line" strokeDasharray="2 4" />
+      <text x={pad.l + 4} y={y(PROFILE.startWeightKg) - 5} className="fill-muted" fontSize="11">
         Inicio {PROFILE.startWeightKg} kg
       </text>
-      {weights.length > 1 && <path d={path} fill="none" stroke="#F5B14C" strokeWidth="2.5" strokeLinejoin="round" />}
+      {weights.length > 1 && <path d={path} fill="none" className="stroke-amber" strokeWidth="2.5" strokeLinejoin="round" />}
       {weights.map((w, i) => (
-        <circle key={w.date} cx={x(i)} cy={y(w.kg)} r="4" fill="#F5B14C">
+        <circle key={w.date} cx={x(i)} cy={y(w.kg)} r="4" className="fill-amber">
           <title>{`${w.date}: ${w.kg.toFixed(1)} kg`}</title>
         </circle>
       ))}
-      <text x={pad.l} y={H - 6} fill="#B3ABB8" fontSize="11">
+      <text x={pad.l} y={H - 6} className="fill-muted" fontSize="11">
         {weights[0].date}
       </text>
-      <text x={W - pad.r} y={H - 6} fill="#B3ABB8" fontSize="11" textAnchor="end">
+      <text x={W - pad.r} y={H - 6} className="fill-muted" fontSize="11" textAnchor="end">
         {weights[weights.length - 1].date}
       </text>
     </svg>

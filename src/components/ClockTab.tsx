@@ -71,7 +71,7 @@ export function ClockTab({ onNavigate }: { onNavigate: (tab: "rutina" | "menu") 
             <p className="mt-2 max-w-prose text-sm text-muted">{current?.description ?? "\u00A0"}</p>
             <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
               {current && (
-                <span className="rounded-full border border-line px-3 py-1" style={{ color: CATEGORY_COLOR[current.category] }}>
+                <span className="rounded-full border-2 px-3 py-1 text-chalk" style={{ borderColor: CATEGORY_COLOR[current.category] }}>
                   {current.start} a {current.end}
                 </span>
               )}
@@ -94,7 +94,7 @@ export function ClockTab({ onNavigate }: { onNavigate: (tab: "rutina" | "menu") 
               </span>
             </div>
             <div className="mt-3">
-              <ProgressBar value={water} max={PROFILE.waterGoalMl} color="#7FB6E0" label="Agua bebida hoy" />
+              <ProgressBar value={water} max={PROFILE.waterGoalMl} barClass="bg-sky" label="Agua bebida hoy" />
             </div>
             <div className="mt-4 flex gap-2">
               <button onClick={() => date && addWater(date, -250)} disabled={!date || water <= 0} aria-label="Quitar 250 ml" className="flex h-11 w-12 items-center justify-center rounded-sm border border-line text-muted transition-colors duration-200 hover:text-chalk disabled:opacity-40">
