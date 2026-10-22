@@ -25,7 +25,12 @@ export const BODY_BASELINE = {
   bmi: 36.3,
   bodyFatPercent: 37.7,
   fatMassKg: 36.8,
-  fatFreeMassKg: 55.4,
+  /**
+   * Calculado como peso total - masa grasa: 97.7 - 36.8 = 60.9 kg.
+   * El valor 55.4 kg anotado previamente no cuadra aritméticamente con el peso
+   * y la masa grasa del mismo registro, por eso no se usa como masa libre de grasa.
+   */
+  fatFreeMassKg: 60.9,
   skeletalMuscleKg: 36,
   visceralFatLevel: 16,
   waistCm: null,
