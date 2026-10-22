@@ -11,6 +11,12 @@ export interface WeightEntry {
   date: string;
   kg: number;
 }
+export interface SessionMeta {
+  /** Día marcado a mano como entrenado (sin series registradas). */
+  manual?: boolean;
+  /** Calorías reales (reloj o pulsera), si las conoces. */
+  kcalReal?: number;
+}
 export interface AppState {
   version: 5;
   /** ml de agua por fecha (YYYY-MM-DD) */
@@ -19,9 +25,11 @@ export interface AppState {
   workoutLogs: Record<string, Record<string, SetLog[]>>;
   weights: WeightEntry[];
   shopping: Record<string, boolean>;
+  /** fecha → marcas manuales y calorías reales */
+  sessions: Record<string, SessionMeta>;
 }
 
-const emptyState = (): AppState => ({ version: 5, water: {}, workoutLogs: {}, weights: [], shopping: {} });
+const emptyState = (): AppState => ({ version: 5, water: {}, workoutLogs: {}, weights: [], shopping: {}, sessions: {} });
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
@@ -54,6 +62,15 @@ function sanitize(raw: unknown): AppState {
   if (isRecord(raw.shopping)) {
     for (const [k, v] of Object.entries(raw.shopping)) if (typeof v === "boolean") base.shopping[k] = v;
   }
+  if (isRecord(raw.sessions)) {
+    for (const [date, v] of Object.entries(raw.sessions)) {
+      if (!isRecord(v)) continue;
+      const meta: SessionMeta = {};
+      if (v.manual === true) meta.manual = true;
+      if (typeof v.kcalReal === "number" && Number.isFinite(v.kcalReal) && v.kcalReal > 0) meta.kcalReal = Math.round(v.kcalReal);
+      if (meta.manual || meta.kcalReal) base.sessions[date] = meta;
+    }
+  }
   return base;
 }
 
@@ -65,6 +82,8 @@ interface StoreValue {
   saveWeight: (date: string, kg: number) => void;
   removeWeight: (date: string) => void;
   toggleShopping: (id: string) => void;
+  /** Actualiza las marcas de un día. kcalReal null borra el valor. */
+  setSession: (date: string, patch: { manual?: boolean; kcalReal?: number | null }) => void;
   exportJSON: () => string;
   importJSON: (text: string) => boolean;
   resetAll: () => void;
@@ -127,6 +146,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, shopping: { ...s.shopping, [id]: !s.shopping[id] } }));
   }, []);
 
+  const setSession = useCallback((date: string, patch: { manual?: boolean; kcalReal?: number | null }) => {
+    setState((s) => {
+      const cur: SessionMeta = { ...s.sessions[date] };
+      if (patch.manual !== undefined) {
+        if (patch.manual) cur.manual = true;
+        else delete cur.manual;
+      }
+      if (patch.kcalReal !== undefined) {
+        if (patch.kcalReal && patch.kcalReal > 0) cur.kcalReal = Math.min(5000, Math.round(patch.kcalReal));
+        else delete cur.kcalReal;
+      }
+      const sessions = { ...s.sessions };
+      if (cur.manual || cur.kcalReal) sessions[date] = cur;
+      else delete sessions[date];
+      return { ...s, sessions };
+    });
+  }, []);
+
   const exportJSON = useCallback(() => JSON.stringify({ ...state, exportedAt: new Date().toISOString(), profile: PROFILE }, null, 2), [state]);
 
   const importJSON = useCallback((text: string) => {
@@ -143,8 +180,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const resetAll = useCallback(() => setState(emptyState()), []);
 
   const value = useMemo<StoreValue>(
-    () => ({ state, ready, addWater, setSetLog, saveWeight, removeWeight, toggleShopping, exportJSON, importJSON, resetAll }),
-    [state, ready, addWater, setSetLog, saveWeight, removeWeight, toggleShopping, exportJSON, importJSON, resetAll],
+    () => ({ state, ready, addWater, setSetLog, saveWeight, removeWeight, toggleShopping, setSession, exportJSON, importJSON, resetAll }),
+    [state, ready, addWater, setSetLog, saveWeight, removeWeight, toggleShopping, setSession, exportJSON, importJSON, resetAll],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

@@ -42,6 +42,13 @@ Para publicarlo, importa el repo en Vercel (no necesita variables de entorno).
 - Horario sin huecos (se añadieron 15:15 comida, 17:20 libre y 21:00 ducha) y sueño total calculado.
 - Gráfico de peso con meta, sin dependencias externas (sin CDN, sin imágenes remotas).
 
+## Calendario de entrenamientos (Progreso)
+
+- Un día cuenta como entrenado si registraste al menos una serie (o minutos de cardio) en **Rutina**, si lo marcas a mano, o si anotas calorías reales.
+- **Racha:** días de entreno seguidos de lunes a sábado. El domingo es descanso y no la rompe.
+- **Calorías estimadas** = MET × peso × horas. Fuerza 4.5 MET (≈2.25 min por serie más 8 min de calentamiento) y cardio 6 MET, con tu último peso registrado. Margen de error de ±20 a 30 %. Si escribes las calorías reales de un reloj, se usan esas.
+- Constantes en `src/lib/training.ts`.
+
 ## Notas
 
 - Las calorías y la proteína de cada comida son **estimaciones** con porciones cocidas. Con el menú actual quedas por debajo de tu meta de calorías en todos los días; la app te muestra la diferencia.

@@ -6,6 +6,7 @@ import { PROFILE } from "@/lib/config";
 import { useStore, type WeightEntry } from "@/lib/store";
 import { todayISO } from "@/lib/time";
 import { Card, ProgressBar, SectionTitle } from "./ui";
+import { TrainingCalendar } from "./TrainingCalendar";
 
 export function ProgressTab() {
   const { state, saveWeight, removeWeight, exportJSON, importJSON, resetAll } = useStore();
@@ -66,6 +67,8 @@ export function ProgressTab() {
         </div>
       </Card>
 
+      <TrainingCalendar />
+
       <Card>
         <SectionTitle title="Registrar pesaje" />
         <div className="flex flex-wrap items-end gap-3">
@@ -116,7 +119,7 @@ export function ProgressTab() {
           <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={(e) => void upload(e.target.files?.[0])} />
           <button
             onClick={() => {
-              if (window.confirm("Se borrarán agua, series, pesos y compras de este dispositivo. ¿Continuar?")) {
+              if (window.confirm("Se borrarán agua, series, pesos, calendario y compras de este dispositivo. ¿Continuar?")) {
                 resetAll();
                 setMsg("Datos borrados.");
               }
