@@ -66,6 +66,67 @@ export function NutritionTab() {
   return (
     <div className="space-y-6">
       <Card>
+        <SectionTitle title="Consumo real del día" hint="Registra lo que realmente comes. Este seguimiento es independiente del menú planificado y se guarda por fecha en este dispositivo." />
+        <label className="block text-sm text-muted">
+          Fecha del registro
+          <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setLogMessage(""); }} max={todayISO()} className="mt-1 block h-11 rounded-sm border border-line bg-ink px-3 text-chalk" />
+        </label>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <label className="text-sm text-muted sm:col-span-2 lg:col-span-1">
+            Alimento o comida
+            <input value={foodName} onChange={(e) => setFoodName(e.target.value)} maxLength={100} placeholder="Ej. 2 huevos cocidos" className="mt-1 block h-11 w-full rounded-sm border border-line bg-ink px-3 text-chalk" />
+          </label>
+          <label className="text-sm text-muted">
+            Calorías (kcal)
+            <input type="number" min="0" max="5000" step="1" value={foodKcal} onChange={(e) => setFoodKcal(e.target.value)} placeholder="155" className="mt-1 block h-11 w-full rounded-sm border border-line bg-ink px-3 text-chalk tabular-nums" />
+          </label>
+          <label className="text-sm text-muted">
+            Proteína (g)
+            <input type="number" min="0" max="400" step="0.1" value={foodProtein} onChange={(e) => setFoodProtein(e.target.value)} placeholder="13" className="mt-1 block h-11 w-full rounded-sm border border-line bg-ink px-3 text-chalk tabular-nums" />
+          </label>
+          <button onClick={addFood} className="min-h-[44px] self-end rounded-sm bg-flame px-4 font-medium text-ink hover:brightness-110">Añadir alimento</button>
+        </div>
+        <p className="mt-2 min-h-5 text-sm text-muted" role="status">{logMessage}</p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-line/70 bg-ink/20 p-4">
+            <div className="mb-1 flex items-center justify-between text-sm">
+              <span>Calorías consumidas</span>
+              <span className="tabular-nums">{consumed.kcal} / {PROFILE.kcalTarget} kcal</span>
+            </div>
+            <ProgressBar value={consumed.kcal} max={PROFILE.kcalTarget} barClass="bg-amber" label="Calorías consumidas" />
+            <p className="mt-2 text-xs text-muted">{consumed.kcal <= PROFILE.kcalTarget ? `Quedan ${PROFILE.kcalTarget - consumed.kcal} kcal respecto a la meta.` : `Superas la meta en ${consumed.kcal - PROFILE.kcalTarget} kcal.`}</p>
+          </div>
+          <div className="rounded-xl border border-line/70 bg-ink/20 p-4">
+            <div className="mb-1 flex items-center justify-between text-sm">
+              <span>Proteína consumida</span>
+              <span className="tabular-nums">{Math.round(consumed.protein * 10) / 10} / {PROFILE.proteinTargetG} g</span>
+            </div>
+            <ProgressBar value={consumed.protein} max={PROFILE.proteinTargetG} barClass="bg-flame" label="Proteína consumida" />
+            <p className="mt-2 text-xs text-muted">{consumed.protein < PROFILE.proteinTargetG ? `Faltan ${Math.round((PROFILE.proteinTargetG - consumed.protein) * 10) / 10} g para la meta.` : "Meta de proteína alcanzada."}</p>
+          </div>
+        </div>
+        <div className="mt-4">
+          {loggedFoods.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-line p-4 text-sm text-muted">Todavía no has registrado alimentos para esta fecha.</p>
+          ) : (
+            <ul className="divide-y divide-line/70">
+              {loggedFoods.map((food) => (
+                <li key={food.id} className="flex items-center justify-between gap-3 py-3">
+                  <div className="min-w-0">
+                    <p className="font-medium">{food.name}</p>
+                    <p className="mt-1 text-sm text-muted">{food.kcal} kcal · {food.protein} g de proteína</p>
+                  </div>
+                  <button onClick={() => removeNutritionEntry(date, food.id)} aria-label={`Eliminar ${food.name}`} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-muted hover:bg-raised hover:text-rose">
+                    <Trash2 size={16} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </Card>
+
+      <Card>
         <SectionTitle title="Menú del día" hint="Elige un día para ver sus comidas con calorías y proteína aproximadas." />
         <DayPicker days={TAPER_DAYS} value={day} onChange={setDay} />
 
