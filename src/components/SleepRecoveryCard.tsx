@@ -37,7 +37,6 @@ export function SleepRecoveryCard() {
     setQuality(saved ? String(saved.quality) : "3");
     setEnergy(saved ? String(saved.energy) : "3");
     setFatigue(saved ? String(saved.fatigue) : "3");
-    setMessage("");
   }, [date, saved]);
 
   const lastSevenDays = useMemo(() => {
