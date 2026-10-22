@@ -8,6 +8,7 @@ import { todayISO } from "@/lib/time";
 import { Card, ProgressBar, SectionTitle } from "./ui";
 import { TrainingCalendar } from "./TrainingCalendar";
 import { BodyMetricsTab } from "./BodyMetricsTab";
+import { SleepRecoveryCard } from "./SleepRecoveryCard";
 
 export function ProgressTab() {
   const { state, saveWeight, removeWeight, exportJSON, importJSON, resetAll } = useStore();
@@ -128,6 +129,8 @@ export function ProgressTab() {
       </Card>
 
       <BodyMetricsTab />
+
+      <SleepRecoveryCard />
 
       <TrainingCalendar />
 
