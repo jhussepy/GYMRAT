@@ -16,7 +16,6 @@
   --sky: 127 182 224;
   --dusk: 165 139 217;
   --steel: 108 127 166;
-  /* categorías del reloj */
   --c-rutina: 127 182 224;
   --c-traslado: 138 131 148;
   --c-trabajo: 108 127 166;
@@ -24,7 +23,7 @@
   --c-sueno: 165 139 217;
   --c-gym: 247 106 80;
   --c-libre: 74 68 82;
-  --grain-opacity: var(--grain-opacity);
+  --grain-opacity: 0.045;
 }
 
 :root[data-theme="light"] {
@@ -48,22 +47,31 @@
   --c-sueno: 127 95 196;
   --c-gym: 192 56 32;
   --c-libre: 201 191 183;
-  --grain-opacity: 0.07;
+  --grain-opacity: 0.035;
 }
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+    scrollbar-gutter: stable;
+  }
   body {
-    background-color: rgb(var(--ink));
+    min-height: 100vh;
+    background:
+      radial-gradient(900px 420px at 50% -180px, rgb(var(--flame) / 0.09), transparent 70%),
+      rgb(var(--ink));
     color: rgb(var(--chalk));
     -webkit-tap-highlight-color: transparent;
-    line-height: 1.5;
+    line-height: 1.55;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "ss01" on;
   }
   h1,
   h2,
   h3 {
     font-family: "Oswald Variable", Oswald, "Arial Narrow", sans-serif;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.045em;
     font-weight: 500;
     line-height: 1.15;
   }
@@ -79,7 +87,11 @@
   }
   :focus-visible {
     outline: 2px solid rgb(var(--amber));
-    outline-offset: 2px;
+    outline-offset: 3px;
+  }
+  ::selection {
+    color: rgb(var(--ink));
+    background: rgb(var(--flame) / 0.72);
   }
 }
 
@@ -89,7 +101,35 @@ input[type="number"]::-webkit-inner-spin-button {
   margin: 0;
 }
 
-/* Textura de grano sutil, para dar profundidad a portada y paneles */
+input,
+select,
+textarea {
+  accent-color: rgb(var(--flame));
+}
+
+.surface-card {
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.07), 0 1px 2px rgb(0 0 0 / 0.04);
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+:root[data-theme="light"] .surface-card {
+  box-shadow: 0 8px 28px rgb(51 35 26 / 0.055), 0 1px 2px rgb(51 35 26 / 0.035);
+}
+.app-header {
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.045);
+}
+.brand-mark {
+  box-shadow: 0 5px 16px rgb(var(--flame) / 0.2);
+}
+.mobile-nav {
+  box-shadow: 0 -10px 30px rgb(0 0 0 / 0.08);
+}
+.timer-fab {
+  box-shadow: 0 10px 28px rgb(var(--flame) / 0.24);
+}
+.progress-track {
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
 .grain {
   position: relative;
   isolation: isolate;
@@ -99,6 +139,7 @@ input[type="number"]::-webkit-inner-spin-button {
   position: absolute;
   inset: 0;
   z-index: -1;
+  border-radius: inherit;
   opacity: var(--grain-opacity);
   pointer-events: none;
   mix-blend-mode: overlay;
@@ -107,38 +148,47 @@ input[type="number"]::-webkit-inner-spin-button {
 
 .hero-bg {
   background:
-    radial-gradient(60% 90% at 88% 105%, rgba(247, 106, 80, 0.24), transparent 62%),
-    linear-gradient(160deg, #2e2833 0%, #1b171f 72%);
+    radial-gradient(50% 80% at 90% 100%, rgb(247 106 80 / 0.24), transparent 68%),
+    radial-gradient(45% 70% at 0% 0%, rgb(165 139 217 / 0.10), transparent 72%),
+    linear-gradient(145deg, #302934 0%, #211b25 55%, #1b171f 100%);
 }
 .panel-a {
   background:
-    radial-gradient(70% 80% at 0% 100%, rgba(247, 106, 80, 0.16), transparent 60%),
+    radial-gradient(70% 80% at 0% 100%, rgb(247 106 80 / 0.16), transparent 60%),
     linear-gradient(135deg, #3a3039 0%, #231e27 100%);
 }
 .panel-b {
   background:
-    radial-gradient(70% 80% at 100% 100%, rgba(165, 139, 217, 0.16), transparent 60%),
+    radial-gradient(70% 80% at 100% 100%, rgb(165 139 217 / 0.16), transparent 60%),
     linear-gradient(135deg, #2f2b3a 0%, #201c26 100%);
 }
 
 :root[data-theme="light"] .hero-bg {
   background:
-    radial-gradient(60% 90% at 88% 105%, rgba(192, 56, 32, 0.16), transparent 62%),
-    linear-gradient(160deg, #ffffff 0%, #efe7e1 80%);
+    radial-gradient(50% 80% at 90% 100%, rgb(192 56 32 / 0.16), transparent 68%),
+    radial-gradient(45% 70% at 0% 0%, rgb(127 95 196 / 0.07), transparent 72%),
+    linear-gradient(145deg, #ffffff 0%, #f5ece7 60%, #efe7e1 100%);
 }
 :root[data-theme="light"] .panel-a {
   background:
-    radial-gradient(70% 80% at 0% 100%, rgba(192, 56, 32, 0.14), transparent 60%),
+    radial-gradient(70% 80% at 0% 100%, rgb(192 56 32 / 0.14), transparent 60%),
     linear-gradient(135deg, #fdf0eb 0%, #f4e4dd 100%);
 }
 :root[data-theme="light"] .panel-b {
   background:
-    radial-gradient(70% 80% at 100% 100%, rgba(127, 95, 196, 0.14), transparent 60%),
+    radial-gradient(70% 80% at 100% 100%, rgb(127 95 196 / 0.14), transparent 60%),
     linear-gradient(135deg, #f4f0fa 0%, #e9e3f3 100%);
 }
 
+@media (hover: hover) {
+  .surface-card:hover {
+    border-color: rgb(var(--line) / 0.95);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
