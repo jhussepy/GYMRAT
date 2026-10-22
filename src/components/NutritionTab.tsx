@@ -44,7 +44,7 @@ export function NutritionTab() {
   const loggedFoods = state.nutritionEntries[date] ?? [];
   const selectedCatalogFood = FOOD_CATALOG.find((food) => food.id === catalogFoodId);
   const grams = Number(foodGrams);
-  const catalogMacros = selectedCatalogFood && Number.isFinite(grams) && grams > 0 && grams <= 5000
+  const catalogMacros = selectedCatalogFood && Number.isInteger(grams) && grams >= 1 && grams <= 5000
     ? nutritionForGrams(selectedCatalogFood, grams)
     : null;
   const consumed = useMemo(
@@ -94,8 +94,8 @@ export function NutritionTab() {
       setLogMessage("Selecciona un alimento del catálogo.");
       return;
     }
-    if (!Number.isFinite(grams) || grams <= 0 || grams > 5000) {
-      setLogMessage("Introduce una cantidad entre 1 y 5000 gramos.");
+    if (!Number.isInteger(grams) || grams < 1 || grams > 5000) {
+      setLogMessage("Introduce una cantidad entera entre 1 y 5000 gramos.");
       return;
     }
     const macros = nutritionForGrams(selectedCatalogFood, grams);
@@ -129,7 +129,7 @@ export function NutritionTab() {
             </label>
             <label className="text-sm text-muted">
               Cantidad (g)
-              <input type="number" inputMode="decimal" min="1" max="5000" step="1" value={foodGrams} onChange={(e) => setFoodGrams(e.target.value)} className="mt-1 block h-11 w-full rounded-sm border border-line bg-ink px-3 text-chalk tabular-nums" />
+              <input type="number" inputMode="numeric" min="1" max="5000" step="1" value={foodGrams} onChange={(e) => setFoodGrams(e.target.value)} className="mt-1 block h-11 w-full rounded-sm border border-line bg-ink px-3 text-chalk tabular-nums" />
             </label>
             <div className="rounded-sm border border-line/70 px-3 py-2 text-sm">
               <p className="text-muted">Estimación por porción</p>
