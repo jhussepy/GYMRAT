@@ -12,6 +12,45 @@ import { TrainingProgress } from "./TrainingProgress";
 
 const inputCls = "h-11 w-full rounded-xl border border-line bg-ink/70 px-2 text-center tabular-nums placeholder:text-muted/70 focus:border-flame focus:bg-ink";
 
+function positiveNumber(value: string | undefined): number {
+  const parsed = Number.parseFloat((value ?? "").replace(",", "."));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function progressionGuidance(ex: Exercise, previous: SetLog[] | undefined): string {
+  if (ex.type === "cardio") {
+    const minutes = positiveNumber(previous?.[0]?.reps);
+    return minutes > 0
+      ? `Última duración registrada: ${minutes} min. Mantén un ritmo sostenible; añade 2–5 min solo si terminas bien y te recuperas adecuadamente.`
+      : "Todavía no hay una duración anterior registrada. Anota los minutos realizados para comparar las próximas sesiones.";
+  }
+
+  const target = /^(\d+)(?:\s*-\s*(\d+))?$/.exec(ex.reps.trim());
+  const lowerTarget = target ? Number(target[1]) : 0;
+  const upperTarget = target ? Number(target[2] ?? target[1]) : 0;
+  const completed = Array.from({ length: ex.sets }, (_, index) => {
+    const set = previous?.[index];
+    return { kg: positiveNumber(set?.kg), reps: positiveNumber(set?.reps) };
+  });
+  const completeSets = completed.filter((set) => set.kg > 0 && set.reps > 0);
+
+  if (completeSets.length < ex.sets) {
+    return "Registra el peso y las repeticiones de todas las series. Con el historial completo podrás ajustar la carga sin adivinar.";
+  }
+
+  if (target && completed.every((set) => set.reps >= upperTarget)) {
+    return `Alcanzaste al menos ${upperTarget} repeticiones en todas las series. Si la técnica fue limpia y quedaron 1–2 repeticiones en reserva, prueba el siguiente incremento pequeño de peso (aprox. 2–5%).`;
+  }
+
+  if (target && completed.some((set) => set.reps < lowerTarget)) {
+    return `Prioriza completar al menos ${lowerTarget} repeticiones con control. Mantén la carga; si la técnica se deteriora, redúcela un poco antes de volver a subir.`;
+  }
+
+  return target
+    ? `Mantén la carga y trata de añadir 1 repetición en alguna serie hasta alcanzar ${upperTarget} en todas, sin perder técnica.`
+    : "Usa la última sesión como referencia. Progresa de forma gradual solo cuando completes todas las series con buena técnica.";
+}
+
 export function WorkoutTab() {
   const { state, setSetLog } = useStore();
   const { startRest } = useRestTimer();
@@ -79,6 +118,8 @@ export function WorkoutTab() {
 
 function ExerciseCard({ ex, index, logs, prev, disabled, onChange, onRest }: { ex: Exercise; index: number; logs: SetLog[]; prev?: SetLog[]; disabled: boolean; onChange: (i: number, f: keyof SetLog, v: string) => void; onRest: () => void }) {
   const cardio = ex.type === "cardio";
+  const guidance = progressionGuidance(ex, prev);
+
   return (
     <Card>
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -89,6 +130,10 @@ function ExerciseCard({ ex, index, logs, prev, disabled, onChange, onRest }: { e
           <h3 className="font-medium">{ex.name}</h3>
           <p className="mt-0.5 text-sm text-muted">En hora punta: {ex.alt}</p>
         </div>
+      </div>
+      <div className="mt-3 rounded-xl border border-flame/20 bg-flame/5 p-3">
+        <p className="text-xs font-semibold uppercase tracking-wider text-flame">Guía de progresión</p>
+        <p className="mt-1 text-sm leading-5 text-muted">{guidance}</p>
       </div>
       <div className="mt-3 space-y-2">
         {Array.from({ length: ex.sets }, (_, i) => {
