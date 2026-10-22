@@ -8,6 +8,7 @@ import { useStore, type SetLog } from "@/lib/store";
 import { todayISO } from "@/lib/time";
 import { Card, DayPicker, ProgressBar } from "./ui";
 import { useRestTimer } from "./RestTimer";
+import { TrainingProgress } from "./TrainingProgress";
 
 const inputCls = "h-11 w-full rounded-xl border border-line bg-ink/70 px-2 text-center tabular-nums placeholder:text-muted/70 focus:border-flame focus:bg-ink";
 
@@ -64,6 +65,8 @@ export function WorkoutTab() {
           </p>
         )}
       </Card>
+
+      <TrainingProgress logs={state.workoutLogs} today={today} />
 
       <div className="space-y-4">
         {exercises.map((ex, i) => (
