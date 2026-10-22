@@ -139,7 +139,7 @@ function Shell() {
                   aria-current={active ? "page" : undefined}
                   className={`mobile-nav-item relative flex min-h-[62px] w-full flex-col items-center justify-center gap-1.5 px-1 text-[10px] font-medium transition-colors duration-200 sm:text-xs ${active ? "text-flame" : "text-muted hover:text-chalk"}`}
                 >
-                  <span className={`flex h-7 w-10 items-center justify-center rounded-xl transition-colors ${active ? "bg-flame/12" : ""}`}>
+                  <span className={`flex h-7 w-10 items-center justify-center rounded-xl transition-colors ${active ? "bg-flame/10" : ""}`}>
                     <Icon size={20} strokeWidth={active ? 2.5 : 1.8} aria-hidden />
                   </span>
                   {t.label}

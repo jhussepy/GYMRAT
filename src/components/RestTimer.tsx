@@ -111,10 +111,10 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
       {children}
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="Cronómetro de descanso">
-          <div className="w-full max-w-sm rounded-xl border border-line bg-panel p-6 text-center">
+          <div className="w-full max-w-sm rounded-2xl border border-line bg-panel p-6 text-center shadow-2xl sm:p-7">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="font-display text-lg">Descanso entre series</h2>
-              <button onClick={close} aria-label="Cerrar cronómetro" className="flex h-11 w-11 items-center justify-center rounded-sm text-muted hover:bg-raised hover:text-chalk">
+              <button onClick={close} aria-label="Cerrar cronómetro" className="flex h-11 w-11 items-center justify-center rounded-xl text-muted hover:bg-raised hover:text-chalk">
                 <X size={18} />
               </button>
             </div>
@@ -129,22 +129,22 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
             </div>
             <div className="mb-4 flex justify-center gap-2">
               {REST_PRESETS.map((p) => (
-                <button key={p} onClick={() => startRest(p)} className={`min-h-[44px] rounded-sm border px-4 text-sm ${total === p ? "border-flame text-flame" : "border-line text-muted hover:text-chalk"}`}>
+                <button key={p} onClick={() => startRest(p)} className={`min-h-[44px] rounded-xl border px-4 text-sm ${total === p ? "border-flame text-flame" : "border-line text-muted hover:text-chalk"}`}>
                   {p} s
                 </button>
               ))}
             </div>
             <div className="flex justify-center gap-2">
               {running ? (
-                <button onClick={pause} className="flex min-h-[44px] items-center gap-2 rounded-sm bg-raised px-4 text-sm hover:bg-line">
+                <button onClick={pause} className="flex min-h-[44px] items-center gap-2 rounded-xl bg-raised px-4 text-sm hover:bg-line">
                   <Pause size={16} /> Pausar
                 </button>
               ) : (
-                <button onClick={resume} className="flex min-h-[44px] items-center gap-2 rounded-sm bg-flame px-4 text-sm font-medium text-ink hover:brightness-110">
+                <button onClick={resume} className="flex min-h-[44px] items-center gap-2 rounded-xl bg-flame px-4 text-sm font-medium text-ink hover:brightness-110">
                   <Play size={16} /> {done ? "Repetir" : "Continuar"}
                 </button>
               )}
-              <button onClick={reset} className="flex min-h-[44px] items-center gap-2 rounded-sm bg-raised px-4 text-sm hover:bg-line">
+              <button onClick={reset} className="flex min-h-[44px] items-center gap-2 rounded-xl bg-raised px-4 text-sm hover:bg-line">
                 <RotateCcw size={16} /> Reiniciar
               </button>
             </div>
