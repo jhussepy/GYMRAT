@@ -13,7 +13,7 @@ import { FOOD_CATALOG, nutritionForGrams } from "@/lib/food-catalog";
 const TAPER_DAYS = WEEKDAYS.filter((d): d is WeekdayWithTaper => d !== "Sábado");
 
 function isValidLoggingDate(value: string): boolean {
-  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const [year, month, day] = value.split("-").map(Number);
   const parsed = new Date(Date.UTC(year, month - 1, day));
   return parsed.getUTCFullYear() === year
@@ -83,6 +83,30 @@ export function NutritionTab() {
     setFoodKcal("");
     setFoodProtein("");
     setLogMessage("Alimento registrado.");
+  };
+
+  const addCatalogFood = () => {
+    if (!isValidLoggingDate(date)) {
+      setLogMessage(!date ? "Selecciona una fecha para registrar el alimento." : date > todayISO() ? "No puedes registrar alimentos en una fecha futura." : "La fecha seleccionada no es válida.");
+      return;
+    }
+    if (!selectedCatalogFood) {
+      setLogMessage("Selecciona un alimento del catálogo.");
+      return;
+    }
+    if (!Number.isFinite(grams) || grams <= 0 || grams > 5000) {
+      setLogMessage("Introduce una cantidad entre 1 y 5000 gramos.");
+      return;
+    }
+    const macros = nutritionForGrams(selectedCatalogFood, grams);
+    addNutritionEntry({
+      id: `${date}-catalog-${Date.now()}`,
+      date,
+      name: `${selectedCatalogFood.label} (${grams} g)`,
+      kcal: macros.kcal,
+      protein: macros.protein,
+    });
+    setLogMessage("Alimento del catálogo registrado con valores estimados.");
   };
 
   return (
