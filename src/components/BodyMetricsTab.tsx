@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Activity, Ruler, Trash2 } from "lucide-react";
+import { Activity, Trash2 } from "lucide-react";
 import { BODY_BASELINE } from "@/lib/config";
 import { useStore, type BodyMeasurementEntry } from "@/lib/store";
 import { todayISO } from "@/lib/time";
@@ -94,7 +94,7 @@ export function BodyMetricsTab() {
         <SectionTitle title="Registrar medición" hint="El peso es obligatorio. Cintura y composición corporal son opcionales." />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Fecha">
-            <input type="date" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value)} className="field-input" />
+            <input type="date" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value)} className="mt-1 block min-h-11 w-full rounded-xl border border-line bg-ink px-3 py-2 text-chalk tabular-nums" />
           </Field>
           <Field label="Peso (kg) *">
             <input type="number" min="30" max="300" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="97.7" className="field-input" />
