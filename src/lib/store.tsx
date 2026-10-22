@@ -11,6 +11,14 @@ export interface WeightEntry {
   date: string;
   kg: number;
 }
+export interface BodyMeasurementEntry {
+  date: string;
+  weightKg: number;
+  waistCm?: number;
+  bodyFatPercent?: number;
+  skeletalMuscleKg?: number;
+  visceralFatLevel?: number;
+}
 export interface SessionMeta {
   /** Día marcado a mano como entrenado (sin series registradas). */
   manual?: boolean;
@@ -18,18 +26,20 @@ export interface SessionMeta {
   kcalReal?: number;
 }
 export interface AppState {
-  version: 5;
+  version: 6;
   /** ml de agua por fecha (YYYY-MM-DD) */
   water: Record<string, number>;
   /** fecha → id de ejercicio → series registradas */
   workoutLogs: Record<string, Record<string, SetLog[]>>;
   weights: WeightEntry[];
+  /** Mediciones corporales fechadas, independientes del pesaje semanal. */
+  bodyMeasurements: BodyMeasurementEntry[];
   shopping: Record<string, boolean>;
   /** fecha → marcas manuales y calorías reales */
   sessions: Record<string, SessionMeta>;
 }
 
-const emptyState = (): AppState => ({ version: 5, water: {}, workoutLogs: {}, weights: [], shopping: {}, sessions: {} });
+const emptyState = (): AppState => ({ version: 6, water: {}, workoutLogs: {}, weights: [], bodyMeasurements: [], shopping: {}, sessions: {} });
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
@@ -59,6 +69,20 @@ function sanitize(raw: unknown): AppState {
       .map((w) => ({ date: w.date as string, kg: w.kg as number }))
       .sort((a, b) => a.date.localeCompare(b.date));
   }
+  if (Array.isArray(raw.bodyMeasurements)) {
+    base.bodyMeasurements = raw.bodyMeasurements
+      .filter(isRecord)
+      .filter((m) => typeof m.date === "string" && typeof m.weightKg === "number" && Number.isFinite(m.weightKg))
+      .map((m) => {
+        const entry: BodyMeasurementEntry = { date: m.date as string, weightKg: m.weightKg as number };
+        if (typeof m.waistCm === "number" && Number.isFinite(m.waistCm) && m.waistCm > 0) entry.waistCm = m.waistCm;
+        if (typeof m.bodyFatPercent === "number" && Number.isFinite(m.bodyFatPercent) && m.bodyFatPercent > 0 && m.bodyFatPercent < 75) entry.bodyFatPercent = m.bodyFatPercent;
+        if (typeof m.skeletalMuscleKg === "number" && Number.isFinite(m.skeletalMuscleKg) && m.skeletalMuscleKg > 0) entry.skeletalMuscleKg = m.skeletalMuscleKg;
+        if (typeof m.visceralFatLevel === "number" && Number.isFinite(m.visceralFatLevel) && m.visceralFatLevel >= 0) entry.visceralFatLevel = m.visceralFatLevel;
+        return entry;
+      })
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
   if (isRecord(raw.shopping)) {
     for (const [k, v] of Object.entries(raw.shopping)) if (typeof v === "boolean") base.shopping[k] = v;
   }
@@ -80,6 +104,8 @@ interface StoreValue {
   addWater: (date: string, ml: number) => void;
   setSetLog: (date: string, exerciseId: string, index: number, field: keyof SetLog, value: string) => void;
   saveWeight: (date: string, kg: number) => void;
+  saveBodyMeasurement: (entry: BodyMeasurementEntry) => void;
+  removeBodyMeasurement: (date: string) => void;
   removeWeight: (date: string) => void;
   toggleShopping: (id: string) => void;
   /** Actualiza las marcas de un día. kcalReal null borra el valor. */
@@ -138,6 +164,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const saveBodyMeasurement = useCallback((entry: BodyMeasurementEntry) => {
+    setState((s) => {
+      const rest = s.bodyMeasurements.filter((m) => m.date !== entry.date);
+      return { ...s, bodyMeasurements: [...rest, entry].sort((a, b) => a.date.localeCompare(b.date)) };
+    });
+  }, []);
+
+  const removeBodyMeasurement = useCallback((date: string) => {
+    setState((s) => ({ ...s, bodyMeasurements: s.bodyMeasurements.filter((m) => m.date !== date) }));
+  }, []);
+
   const removeWeight = useCallback((date: string) => {
     setState((s) => ({ ...s, weights: s.weights.filter((w) => w.date !== date) }));
   }, []);
@@ -169,7 +206,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const importJSON = useCallback((text: string) => {
     try {
       const parsed: unknown = JSON.parse(text);
-      if (!isRecord(parsed) || parsed.version !== 5) return false;
+      if (!isRecord(parsed) || (parsed.version !== 5 && parsed.version !== 6)) return false;
       setState(sanitize(parsed));
       return true;
     } catch {
@@ -180,8 +217,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const resetAll = useCallback(() => setState(emptyState()), []);
 
   const value = useMemo<StoreValue>(
-    () => ({ state, ready, addWater, setSetLog, saveWeight, removeWeight, toggleShopping, setSession, exportJSON, importJSON, resetAll }),
-    [state, ready, addWater, setSetLog, saveWeight, removeWeight, toggleShopping, setSession, exportJSON, importJSON, resetAll],
+    () => ({ state, ready, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, setSession, exportJSON, importJSON, resetAll }),
+    [state, ready, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, setSession, exportJSON, importJSON, resetAll],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
