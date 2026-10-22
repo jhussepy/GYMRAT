@@ -37,6 +37,15 @@ function positiveNumber(value: string | undefined): number {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
+function isValidCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
+}
+
 function displayDate(value: string): string {
   return new Intl.DateTimeFormat("es-ES", {
     weekday: "short",
@@ -61,7 +70,7 @@ export function TrainingProgress({ logs, today }: {
   const history = useMemo(() => {
     if (!selected) return [] as TrainingSession[];
     return Object.entries(logs)
-      .filter(([date]) => /^\d{4}-\d{2}-\d{2}$/.test(date) && date <= today)
+      .filter(([date]) => isValidCalendarDate(date) && date <= today)
       .map(([date, day]) => {
         const sets = (day[selected.id] ?? []).slice(0, selected.sets);
         if (selected.type === "cardio") {
