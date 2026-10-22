@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Download, Trash2, Upload } from "lucide-react";
-import { PROFILE } from "@/lib/config";
+import { Download, Moon, Scale, Target, Trash2, Upload } from "lucide-react";
+import { BODY_BASELINE, PROFILE } from "@/lib/config";
 import { useStore, type WeightEntry } from "@/lib/store";
 import { todayISO } from "@/lib/time";
 import { Card, ProgressBar, SectionTitle } from "./ui";
@@ -16,9 +16,11 @@ export function ProgressTab() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const weights = state.weights;
-  const last = weights.length ? weights[weights.length - 1].kg : PROFILE.startWeightKg;
+  const last = weights.length ? weights[weights.length - 1].kg : PROFILE.currentWeightKg;
   const lost = PROFILE.startWeightKg - last;
   const total = PROFILE.startWeightKg - PROFILE.goalWeightKg;
+  const firstMilestoneProgress = Math.max(0, PROFILE.currentWeightKg - last);
+  const firstMilestoneTotal = PROFILE.currentWeightKg - PROFILE.firstMilestoneKg;
 
   const submit = () => {
     const value = parseFloat(kg.replace(",", "."));
@@ -53,18 +55,75 @@ export function ProgressTab() {
   return (
     <div className="space-y-6">
       <Card>
-        <SectionTitle title="Tu progreso" hint="Pésate cada sábado en ayunas, después de ir al baño." />
+        <SectionTitle title="Tu progreso" hint="Pésate en condiciones similares cada semana. Observa la tendencia, no un solo día." />
         <div className="grid gap-4 sm:grid-cols-3">
           <Stat label="Peso actual" value={`${last.toFixed(1)} kg`} />
-          <Stat label="Has bajado" value={`${lost.toFixed(1)} kg`} />
-          <Stat label={`Faltan para ${PROFILE.goalWeightKg} kg`} value={`${Math.max(0, last - PROFILE.goalWeightKg).toFixed(1)} kg`} />
+          <Stat label="Cambio desde el inicio" value={`${lost > 0 ? "−" : lost < 0 ? "+" : ""}${Math.abs(lost).toFixed(1)} kg`} />
+          <Stat label={`Distancia a ${PROFILE.goalWeightKg} kg`} value={`${Math.max(0, last - PROFILE.goalWeightKg).toFixed(1)} kg`} />
         </div>
         <div className="mt-4">
-          <ProgressBar value={Math.max(0, lost)} max={total} label="Avance hacia tu meta de peso" />
+          <ProgressBar value={Math.max(0, lost)} max={total} label="Avance hacia la meta de largo plazo" />
           <p className="mt-1.5 text-sm text-muted tabular-nums">
-            Saliste de {PROFILE.startWeightKg} kg · meta {PROFILE.goalWeightKg} kg
+            Inicio histórico: {PROFILE.startWeightKg} kg · meta de largo plazo: {PROFILE.goalWeightKg} kg
           </p>
         </div>
+      </Card>
+
+      <Card>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <SectionTitle title="Tu punto de partida físico" hint="Bioimpedancia del 22/10/2026 · Esta es tu línea base para el cambio físico." />
+          </div>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber/40 bg-amber/10 px-3 py-1.5 text-xs font-medium text-amber">
+            <Scale size={14} aria-hidden /> Línea base
+          </span>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <BaselineStat label="Peso medido" value={`${BODY_BASELINE.weightKg.toFixed(1)} kg`} detail="22 oct 2026" />
+          <BaselineStat label="Grasa corporal" value={`${BODY_BASELINE.bodyFatPercent.toFixed(1)} %`} detail={`${BODY_BASELINE.fatMassKg.toFixed(1)} kg de grasa estimada`} />
+          <BaselineStat label="Masa libre de grasa" value={`${BODY_BASELINE.fatFreeMassKg.toFixed(1)} kg`} detail="Incluye músculo, agua, huesos y órganos" />
+          <BaselineStat label="IMC" value={BODY_BASELINE.bmi.toFixed(1)} detail="Indicador de cribado, no diagnóstico" />
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <div className="rounded-xl border border-line/70 bg-ink/20 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Target size={17} className="text-flame" aria-hidden /> Primera meta
+            </div>
+            <p className="mt-2 font-display text-3xl tabular-nums">{PROFILE.firstMilestoneKg.toFixed(1)} kg</p>
+            <p className="mt-1 text-sm leading-5 text-muted">
+              Aproximadamente un 5 % menos que tu peso de referencia: unos {(BODY_BASELINE.weightKg - PROFILE.firstMilestoneKg).toFixed(1)} kg por debajo del registro inicial. Después, revisamos cómo te sientes y cómo evoluciona tu composición corporal.
+            </p>
+            <div className="mt-4">
+              <ProgressBar value={firstMilestoneProgress} max={firstMilestoneTotal} label="Avance hacia la primera meta" />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-line/70 bg-ink/20 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Moon size={17} className="text-dusk" aria-hidden /> Recuperación: prioridad
+            </div>
+            <p className="mt-2 font-display text-2xl">{BODY_BASELINE.sleepHoursLabel}</p>
+            <p className="mt-1 text-sm leading-5 text-muted">
+              Tu registro indica {BODY_BASELINE.trainingDaysPerWeek} días de entrenamiento por semana y menos de 6 horas de sueño habitual. Antes de subir la intensidad, trabaja gradualmente hacia 7–9 horas totales de sueño al día, contando las siestas.
+            </p>
+            <p className="mt-3 text-xs leading-5 text-muted">
+              Cintura: pendiente de medir · Síntomas durante el ejercicio: {BODY_BASELINE.exerciseSymptoms.toLowerCase()}.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-line/70 p-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <BaselineStat label="Grasa visceral (índice)" value={String(BODY_BASELINE.visceralFatLevel)} detail="Índice del equipo; no es una medición directa de grasa alrededor de los órganos" />
+            <BaselineStat label="Músculo esquelético estimado" value={`≈${BODY_BASELINE.skeletalMuscleKg} kg`} detail="Úsalo para comparar mediciones tomadas en condiciones similares" />
+            <BaselineStat label="Cintura" value="Pendiente" detail="Mídela a la altura del ombligo y registra el dato" />
+          </div>
+        </div>
+        <p className="mt-4 text-xs leading-5 text-muted">
+          La bioimpedancia estima la composición corporal y puede variar con la hidratación, las comidas y el ejercicio reciente. Usa estos datos como referencia, no como diagnóstico. El objetivo es reducir grasa progresivamente, conservar músculo y mejorar la recuperación.
+        </p>
       </Card>
 
       <TrainingCalendar />
@@ -78,7 +137,7 @@ export function ProgressTab() {
           </label>
           <label className="text-sm text-muted">
             Peso (kg)
-            <input type="number" inputMode="decimal" step="0.1" value={kg} onChange={(e) => setKg(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} placeholder="98.4" className="mt-1 block w-28 rounded-sm border border-line bg-ink px-3 py-2 text-chalk tabular-nums" />
+            <input type="number" inputMode="decimal" step="0.1" value={kg} onChange={(e) => setKg(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} placeholder="97.7" className="mt-1 block w-28 rounded-sm border border-line bg-ink px-3 py-2 text-chalk tabular-nums" />
           </label>
           <button onClick={submit} className="rounded-sm bg-flame px-5 min-h-[44px] font-medium text-ink hover:brightness-110">
             Guardar peso
@@ -139,6 +198,16 @@ function Stat({ label, value }: { label: string; value: string }) {
     <div className="rounded-sm border border-line p-4">
       <p className="text-sm text-muted">{label}</p>
       <p className="mt-1 font-display text-3xl tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+function BaselineStat({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <div className="rounded-xl border border-line/70 bg-ink/15 p-3.5">
+      <p className="text-xs leading-5 text-muted">{label}</p>
+      <p className="mt-1.5 font-display text-2xl tabular-nums">{value}</p>
+      <p className="mt-1 text-xs leading-5 text-muted">{detail}</p>
     </div>
   );
 }
