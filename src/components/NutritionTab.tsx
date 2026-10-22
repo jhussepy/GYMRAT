@@ -34,7 +34,7 @@ export function NutritionTab() {
                 {t.kcal} de {PROFILE.kcalTarget} kcal
               </span>
             </div>
-            <ProgressBar value={t.kcal} max={PROFILE.kcalTarget} color="#F2B544" label="Calorías del día" />
+            <ProgressBar value={t.kcal} max={PROFILE.kcalTarget} color="#F5B14C" label="Calorías del día" />
           </div>
           <div>
             <div className="mb-1.5 flex justify-between text-sm">
@@ -43,7 +43,7 @@ export function NutritionTab() {
                 {t.protein} de {PROFILE.proteinTargetG} g
               </span>
             </div>
-            <ProgressBar value={t.protein} max={PROFILE.proteinTargetG} color="#2FB58C" label="Proteína del día" />
+            <ProgressBar value={t.protein} max={PROFILE.proteinTargetG} color="#F76A50" label="Proteína del día" />
           </div>
         </div>
         <p className="mt-3 text-sm text-muted">
@@ -110,7 +110,7 @@ export function NutritionTab() {
           {TAPER_DAYS.map((d) => {
             const tp = TAPERS[d];
             return (
-              <div key={tp.id} className="rounded-md border border-line p-4">
+              <div key={tp.id} className="rounded-sm border border-line p-4">
                 <p className="text-sm text-sky">
                   {tp.num} · {d}
                 </p>

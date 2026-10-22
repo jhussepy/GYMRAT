@@ -29,13 +29,13 @@ export const SCHEDULE: ScheduleItem[] = [
 ];
 
 export const CATEGORY_COLOR: Record<Category, string> = {
-  Rutina: "#6EB5E8",
-  Traslado: "#7B8CA6",
-  Trabajo: "#5D7BA8",
-  Nutrición: "#F2B544",
-  Sueño: "#A48BE0",
-  Gym: "#2FB58C",
-  Libre: "#3A506F",
+  Rutina: "#7FB6E0",
+  Traslado: "#8A8394",
+  Trabajo: "#6C7FA6",
+  Nutrición: "#F5B14C",
+  Sueño: "#A58BD9",
+  Gym: "#F76A50",
+  Libre: "#4A4452",
 };
 
 /* ───────── Rutina ───────── */

@@ -113,38 +113,38 @@ export function RestTimerProvider({ children }: { children: ReactNode }) {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/80 p-4 sm:items-center" role="dialog" aria-modal="true" aria-label="Cronómetro de descanso">
           <div className="w-full max-w-sm rounded-xl border border-line bg-panel p-6 text-center">
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="font-serif text-lg">Descanso entre series</h2>
-              <button onClick={close} aria-label="Cerrar cronómetro" className="rounded-md p-1.5 text-muted hover:bg-raised hover:text-chalk">
+              <h2 className="font-display text-lg">Descanso entre series</h2>
+              <button onClick={close} aria-label="Cerrar cronómetro" className="flex h-11 w-11 items-center justify-center rounded-sm text-muted hover:bg-raised hover:text-chalk">
                 <X size={18} />
               </button>
             </div>
             <div className="relative mx-auto my-4 h-44 w-44">
               <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" aria-hidden="true">
-                <circle cx="60" cy="60" r={R} fill="none" stroke="#2A3F5F" strokeWidth="8" />
-                <circle cx="60" cy="60" r={R} fill="none" stroke={done ? "#F2B544" : "#2FB58C"} strokeWidth="8" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} />
+                <circle cx="60" cy="60" r={R} fill="none" stroke="#51495A" strokeWidth="8" />
+                <circle cx="60" cy="60" r={R} fill="none" stroke={done ? "#F5B14C" : "#F76A50"} strokeWidth="8" strokeLinecap="round" strokeDasharray={C} strokeDashoffset={C * (1 - frac)} />
               </svg>
-              <div className="absolute inset-0 flex items-center justify-center font-serif text-4xl tabular-nums" aria-live="polite">
+              <div className="absolute inset-0 flex items-center justify-center font-display text-4xl tabular-nums" aria-live="polite">
                 {done ? "A serie" : `${pad2(Math.floor(remaining / 60))}:${pad2(remaining % 60)}`}
               </div>
             </div>
             <div className="mb-4 flex justify-center gap-2">
               {REST_PRESETS.map((p) => (
-                <button key={p} onClick={() => startRest(p)} className={`rounded-md border px-3 py-1.5 text-sm ${total === p ? "border-mint text-mint" : "border-line text-muted hover:text-chalk"}`}>
+                <button key={p} onClick={() => startRest(p)} className={`min-h-[44px] rounded-sm border px-4 text-sm ${total === p ? "border-flame text-flame" : "border-line text-muted hover:text-chalk"}`}>
                   {p} s
                 </button>
               ))}
             </div>
             <div className="flex justify-center gap-2">
               {running ? (
-                <button onClick={pause} className="flex items-center gap-2 rounded-md bg-raised px-4 py-2 text-sm hover:bg-line">
+                <button onClick={pause} className="flex min-h-[44px] items-center gap-2 rounded-sm bg-raised px-4 text-sm hover:bg-line">
                   <Pause size={16} /> Pausar
                 </button>
               ) : (
-                <button onClick={resume} className="flex items-center gap-2 rounded-md bg-mint px-4 py-2 text-sm font-medium text-ink hover:brightness-110">
+                <button onClick={resume} className="flex min-h-[44px] items-center gap-2 rounded-sm bg-flame px-4 text-sm font-medium text-ink hover:brightness-110">
                   <Play size={16} /> {done ? "Repetir" : "Continuar"}
                 </button>
               )}
-              <button onClick={reset} className="flex items-center gap-2 rounded-md bg-raised px-4 py-2 text-sm hover:bg-line">
+              <button onClick={reset} className="flex min-h-[44px] items-center gap-2 rounded-sm bg-raised px-4 text-sm hover:bg-line">
                 <RotateCcw size={16} /> Reiniciar
               </button>
             </div>

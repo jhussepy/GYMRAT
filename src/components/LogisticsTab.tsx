@@ -25,8 +25,8 @@ export function LogisticsTab() {
           const checked = !!state.shopping[item.id];
           return (
             <li key={item.id}>
-              <button onClick={() => toggleShopping(item.id)} role="checkbox" aria-checked={checked} className="flex w-full items-center gap-3 rounded-md border border-line p-3 text-left hover:bg-raised">
-                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${checked ? "border-mint bg-mint text-ink" : "border-line"}`}>{checked && <Check size={14} />}</span>
+              <button onClick={() => toggleShopping(item.id)} role="checkbox" aria-checked={checked} className="flex w-full items-center gap-3 rounded-sm border border-line p-3 text-left hover:bg-raised">
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${checked ? "border-flame bg-flame text-ink" : "border-line"}`}>{checked && <Check size={14} />}</span>
                 <span className={checked ? "text-muted line-through" : ""}>
                   <span className="font-medium">{item.label}</span>
                   <span className="ml-2 text-sm text-muted">{item.qty}</span>

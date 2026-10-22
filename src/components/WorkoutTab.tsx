@@ -9,7 +9,7 @@ import { todayISO } from "@/lib/time";
 import { Card, DayPicker, ProgressBar } from "./ui";
 import { useRestTimer } from "./RestTimer";
 
-const inputCls = "w-full rounded-md border border-line bg-ink px-2 py-2 text-center tabular-nums placeholder:text-line focus:border-mint";
+const inputCls = "h-11 w-full rounded-sm border border-line bg-ink px-2 text-center tabular-nums placeholder:text-muted/70 focus:border-flame";
 
 export function WorkoutTab() {
   const { state, setSetLog } = useStore();
@@ -47,7 +47,7 @@ export function WorkoutTab() {
       <Card>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="font-serif text-xl">Smart Fit · {day}</h2>
+            <h2 className="font-display text-xl">Smart Fit · {day}</h2>
             <p className="text-sm text-muted">{WORKOUT_FOCUS[day]} · 19:00 a 21:00</p>
           </div>
           <div className="w-full max-w-[220px] text-right text-sm text-muted">
@@ -59,7 +59,7 @@ export function WorkoutTab() {
         </div>
         <DayPicker days={WEEKDAYS} value={day} onChange={setDay} labels={WORKOUT_FOCUS} />
         {day !== "Sábado" && (
-          <p className="mt-4 rounded-md bg-raised p-3 text-sm text-muted">
+          <p className="mt-4 rounded-sm bg-raised p-3 text-sm text-muted">
             Antes de empezar, 5 a 8 min de calentamiento y una serie ligera del primer ejercicio. Termina cada serie con 1 o 2 repeticiones en reserva. Si ya superaste el rango de repeticiones con buena técnica, sube el peso la próxima vez.
           </p>
         )}
@@ -102,7 +102,7 @@ function ExerciseCard({ ex, index, logs, prev, disabled, onChange, onRest }: { e
                   <input type="number" inputMode="numeric" min={0} aria-label={`Repeticiones, serie ${i + 1} de ${ex.name}`} placeholder={p?.reps ? `${p.reps} reps` : "reps"} value={log.reps} disabled={disabled} onChange={(e) => onChange(i, "reps", e.target.value)} className={inputCls} />
                 </>
               )}
-              <button onClick={onRest} aria-label="Iniciar descanso de 90 segundos" className="rounded-md border border-line p-2 text-muted hover:bg-raised hover:text-chalk">
+              <button onClick={onRest} aria-label="Iniciar descanso de 90 segundos" className="flex h-11 w-11 items-center justify-center rounded-sm border border-line text-muted transition-colors duration-200 hover:bg-raised hover:text-chalk">
                 <Timer size={16} />
               </button>
             </div>

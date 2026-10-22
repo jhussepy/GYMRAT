@@ -34,7 +34,7 @@ export function DayDial({ fraction, activeStart, title, subtitle }: Props) {
   const marker = fraction === null ? null : fraction * 360;
   return (
     <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="mx-auto w-full max-w-[340px]" role="img" aria-label="Reloj de 24 horas con los bloques de tu día">
-      <circle cx={CX} cy={CX} r={R} fill="none" stroke="#152238" strokeWidth={STROKE + 8} />
+      <circle cx={CX} cy={CX} r={R} fill="none" stroke="#2A252F" strokeWidth={STROKE + 8} />
       {SCHEDULE.map((item) => {
         const s = startDeg(item);
         const len = (blockMinutes(item) / DAY_MIN) * 360;
@@ -57,7 +57,7 @@ export function DayDial({ fraction, activeStart, title, subtitle }: Props) {
           <line x1={polar(marker, R - 26).x} y1={polar(marker, R - 26).y} x2={polar(marker, R + 26).x} y2={polar(marker, R + 26).y} stroke="#EFE9DC" strokeWidth="3" strokeLinecap="round" />
         </g>
       )}
-      <text x={CX} y={CX - 6} textAnchor="middle" className="fill-chalk font-serif" fontSize="38" style={{ fontVariantNumeric: "tabular-nums" }}>
+      <text x={CX} y={CX - 6} textAnchor="middle" className="fill-chalk font-display" fontSize="38" style={{ fontVariantNumeric: "tabular-nums" }}>
         {title}
       </text>
       <text x={CX} y={CX + 22} textAnchor="middle" className="fill-muted" fontSize="14">
