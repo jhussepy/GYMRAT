@@ -23,7 +23,7 @@ function formatDelta(value: number | undefined, baseline: number): string {
 export function BodyMetricsTab() {
   const { state, saveBodyMeasurement, removeBodyMeasurement } = useStore();
   const [date, setDate] = useState(todayISO());
-  const [weight, setWeight] = useState(String(BODY_BASELINE.weightKg));
+  const [weight, setWeight] = useState("");
   const [waist, setWaist] = useState("");
   const [fat, setFat] = useState("");
   const [muscle, setMuscle] = useState("");
