@@ -1,6 +1,6 @@
 # GYMRAT — Preparación de Supabase
 
-Esta fase prepara el esquema de persistencia, pero **no conecta todavía la aplicación a Supabase**. Hasta que se integre y pruebe el cliente, GYMRAT sigue guardando los datos en el navegador.
+La primera fase prepara el esquema y esta segunda fase añade el formulario de registro/inicio de sesión en `/cuenta`. La sincronización del progreso todavía no está activada: los datos de entrenamiento siguen guardándose en el navegador hasta completar y validar la siguiente parte.
 
 ## 1. Crear el proyecto
 
@@ -41,7 +41,7 @@ El archivo `.env.example` solo documenta los nombres; no contiene credenciales r
 
 No se deben solicitar ni incluir credenciales en una Pull Request. La conexión de la app, el inicio de sesión y la migración de los datos de `localStorage` se harán en una siguiente fase después de confirmar que el proyecto Supabase existe y que la migración se aplicó correctamente.
 
-## 5. Verificación antes de conectar la aplicación
+## 5. Verificación de autenticación
 
 - [ ] El proyecto Supabase está activo.
 - [ ] La tabla `public.user_app_state` existe.
@@ -49,5 +49,7 @@ No se deben solicitar ni incluir credenciales en una Pull Request. La conexión 
 - [ ] Las políticas solo permiten acceso al propietario autenticado.
 - [ ] La URL y la publishable/anon key están configuradas en los entornos correctos.
 - [ ] No se ha añadido ninguna contraseña ni clave secreta al repositorio.
+- [ ] La ruta `/cuenta` permite crear una cuenta e iniciar/cerrar sesión.
+- [ ] En Authentication → URL Configuration, configura la URL de tu despliegue y las redirecciones permitidas para confirmación de correo si tu proyecto las exige.
 
-**Importante:** esta primera fase no modifica el comportamiento actual ni borra datos locales. Antes de activar sincronización, la integración deberá incluir una migración controlada de los datos existentes, manejo de errores y pruebas de aislamiento entre usuarios.
+La pantalla de cuenta usa la URL y la clave pública del proyecto. No borra ni importa automáticamente el progreso local. **La sincronización cloud y la migración controlada de datos son pasos pendientes**: antes de activarlas se deben resolver los casos en los que ya existen datos locales, datos en la nube o ambos.
