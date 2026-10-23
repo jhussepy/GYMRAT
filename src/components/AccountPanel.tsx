@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Activity, ArrowLeft, CheckCircle2, Cloud, LogOut, ShieldCheck, UserRound } from "lucide-react";
 import Link from "next/link";
 import { getCurrentSession, signInWithPassword, signOut, signUpWithPassword, type AuthSession } from "@/lib/supabase-auth";
+import { fetchCloudState, readLocalAppState, restoreCloudStateToLocal, uploadLocalStateToCloud, type CloudStateResult } from "@/lib/supabase-state";
 
 type Mode = "login" | "signup";
 
@@ -16,6 +17,12 @@ export function AccountPanel() {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [cloudCheck, setCloudCheck] = useState<"idle" | "loading" | "ready">("idle");
+  const [cloudState, setCloudState] = useState<CloudStateResult | null>(null);
+  const [syncBusy, setSyncBusy] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
+  const [syncError, setSyncError] = useState("");
+  const [localAvailable, setLocalAvailable] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -35,11 +42,17 @@ export function AccountPanel() {
       if (mode === "login") {
         const next = await signInWithPassword(email.trim(), password);
         setSession(next);
+        setCloudCheck("idle");
+        setCloudState(null);
+        setLocalAvailable(Boolean(readLocalAppState()));
         setPassword("");
         setMessage("Sesión iniciada. La sincronización de tus datos se incorporará en la siguiente parte de esta etapa.");
       } else {
         const result = await signUpWithPassword(email.trim(), password);
         setSession(result.session);
+        setCloudCheck("idle");
+        setCloudState(null);
+        setLocalAvailable(Boolean(readLocalAppState()));
         setPassword("");
         setMessage(result.confirmationRequired
           ? "Cuenta creada. Revisa tu correo y confirma la dirección antes de iniciar sesión."
@@ -52,12 +65,62 @@ export function AccountPanel() {
     }
   }
 
+  async function checkCloud() {
+    setCloudCheck("loading");
+    setSyncError("");
+    setSyncMessage("");
+    try {
+      const result = await fetchCloudState();
+      setCloudState(result);
+      setCloudCheck("ready");
+      setLocalAvailable(Boolean(readLocalAppState()));
+    } catch (cause) {
+      setCloudCheck("idle");
+      setSyncError(cause instanceof Error ? cause.message : "No se pudieron consultar los datos de la nube.");
+    }
+  }
+
+  async function uploadLocal() {
+    setSyncError("");
+    setSyncMessage("");
+    if (!window.confirm("Esto guardará el progreso local de ESTE dispositivo en tu cuenta y reemplazará los datos que ya existan en la nube. Si los datos locales pertenecen a otra persona, no continúes. ¿Quieres seguir?")) return;
+    setSyncBusy(true);
+    try {
+      await uploadLocalStateToCloud();
+      const result = await fetchCloudState();
+      setCloudState(result);
+      setCloudCheck("ready");
+      setSyncMessage("Progreso de este dispositivo guardado en tu cuenta de Supabase.");
+    } catch (cause) {
+      setSyncError(cause instanceof Error ? cause.message : "No se pudieron subir los datos.");
+    } finally {
+      setSyncBusy(false);
+    }
+  }
+
+  async function restoreCloud() {
+    setSyncError("");
+    setSyncMessage("");
+    if (!window.confirm("Esto reemplazará los datos locales de este navegador con el estado de tu cuenta. Si necesitas conservarlos, cancela y exporta una copia desde GYMRAT primero. ¿Quieres continuar?")) return;
+    setSyncBusy(true);
+    try {
+      await restoreCloudStateToLocal();
+      window.location.assign("/");
+    } catch (cause) {
+      setSyncError(cause instanceof Error ? cause.message : "No se pudieron restaurar los datos.");
+      setSyncBusy(false);
+    }
+  }
+
   async function logout() {
     setSubmitting(true);
     setError("");
     try {
       await signOut();
       setSession(null);
+      setCloudCheck("idle");
+      setCloudState(null);
+      setLocalAvailable(false);
       setMessage("Has cerrado sesión.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo cerrar sesión.");
@@ -101,7 +164,37 @@ export function AccountPanel() {
               <button type="button" onClick={logout} disabled={submitting} className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line px-4 text-sm font-semibold transition hover:bg-raised disabled:opacity-60">
                 <LogOut size={16} aria-hidden /> {submitting ? "Procesando…" : "Cerrar sesión"}
               </button>
-              <p className="mt-4 text-sm text-muted">La cuenta ya puede autenticarse. La sincronización automática del progreso aún no está activada.</p>
+              <div className="mt-6 rounded-2xl border border-line/70 bg-ink/20 p-4 sm:p-5">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-flame/10 text-flame"><Cloud size={20} aria-hidden /></span>
+                  <div>
+                    <h2 className="font-semibold">Progreso en la nube</h2>
+                    <p className="mt-1 text-sm leading-6 text-muted">Comprueba primero si ya hay datos en Supabase. Después elige de forma explícita qué copia quieres conservar.</p>
+                  </div>
+                </div>
+                <p className="mt-3 text-xs leading-5 text-muted">Datos locales válidos en este navegador: <strong className="text-chalk">{localAvailable ? "sí" : "no detectados"}</strong></p>
+                <button type="button" onClick={checkCloud} disabled={cloudCheck === "loading" || syncBusy} className="mt-4 min-h-10 rounded-xl border border-line px-3 text-sm font-semibold transition hover:bg-raised disabled:opacity-60">
+                  {cloudCheck === "loading" ? "Consultando Supabase…" : "Comprobar datos en la nube"}
+                </button>
+                {cloudCheck === "ready" && cloudState && (
+                  <div className="mt-4 rounded-xl border border-line/70 p-3">
+                    <p className="text-sm font-semibold">{cloudState.exists ? "Ya existe una copia en la nube" : "Todavía no hay una copia en la nube"}</p>
+                    {cloudState.updatedAt && <p className="mt-1 text-xs text-muted">Última actualización: {new Date(cloudState.updatedAt).toLocaleString("es-ES")}</p>}
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                      <button type="button" onClick={uploadLocal} disabled={syncBusy || !localAvailable} className="min-h-10 rounded-xl bg-flame px-3 text-sm font-semibold text-ink transition hover:brightness-110 disabled:opacity-50">
+                        {syncBusy ? "Procesando…" : cloudState.exists ? "Reemplazar nube con datos locales" : "Subir datos locales a la nube"}
+                      </button>
+                      <button type="button" onClick={restoreCloud} disabled={syncBusy || !cloudState.exists} className="min-h-10 rounded-xl border border-line px-3 text-sm font-semibold transition hover:bg-raised disabled:opacity-50">
+                        Restaurar nube en este dispositivo
+                      </button>
+                    </div>
+                    <p className="mt-3 text-xs leading-5 text-muted">Estas acciones copian una versión completa; no combinan registros automáticamente. Se solicita confirmación antes de sobrescribir datos.</p>
+                  </div>
+                )}
+                {syncMessage && <p role="status" className="mt-3 text-sm leading-6 text-flame">{syncMessage}</p>}
+                {syncError && <p role="alert" className="mt-3 text-sm leading-6 text-rose">{syncError}</p>}
+              </div>
+              <p className="mt-4 text-sm text-muted">La sincronización automática de cambios aún no está activada; primero valida esta transferencia inicial y después incorporaremos la sincronización continua.</p>
             </div>
           ) : (
             <>

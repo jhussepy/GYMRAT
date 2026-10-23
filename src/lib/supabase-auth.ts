@@ -16,7 +16,7 @@ export interface AuthSession {
 
 const SESSION_KEY = "gymrat_supabase_session";
 
-function config() {
+export function getSupabaseConfig() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
   const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
     || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -46,7 +46,7 @@ function storeSession(session: AuthSession | null) {
 }
 
 async function authRequest<T>(path: string, body?: unknown, accessToken?: string): Promise<T> {
-  const { url, key } = config();
+  const { url, key } = getSupabaseConfig();
   const response = await fetch(`${url}/auth/v1/${path}`, {
     method: body === undefined ? "GET" : "POST",
     headers: {
