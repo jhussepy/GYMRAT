@@ -42,11 +42,17 @@ export function AccountPanel() {
       if (mode === "login") {
         const next = await signInWithPassword(email.trim(), password);
         setSession(next);
+        setCloudCheck("idle");
+        setCloudState(null);
+        setLocalAvailable(Boolean(readLocalAppState()));
         setPassword("");
         setMessage("Sesión iniciada. La sincronización de tus datos se incorporará en la siguiente parte de esta etapa.");
       } else {
         const result = await signUpWithPassword(email.trim(), password);
         setSession(result.session);
+        setCloudCheck("idle");
+        setCloudState(null);
+        setLocalAvailable(Boolean(readLocalAppState()));
         setPassword("");
         setMessage(result.confirmationRequired
           ? "Cuenta creada. Revisa tu correo y confirma la dirección antes de iniciar sesión."
@@ -112,6 +118,9 @@ export function AccountPanel() {
     try {
       await signOut();
       setSession(null);
+      setCloudCheck("idle");
+      setCloudState(null);
+      setLocalAvailable(false);
       setMessage("Has cerrado sesión.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo cerrar sesión.");
