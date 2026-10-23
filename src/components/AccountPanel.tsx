@@ -1,9 +1,9 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Activity, ArrowLeft, CheckCircle2, Cloud, LogOut, ShieldCheck, UserRound } from "lucide-react";
 import Link from "next/link";
-import { AuthSession, getCurrentSession, signInWithPassword, signOut, signUpWithPassword } from "@/lib/supabase-auth";
+import { getCurrentSession, signInWithPassword, signOut, signUpWithPassword, type AuthSession } from "@/lib/supabase-auth";
 
 type Mode = "login" | "signup";
 
