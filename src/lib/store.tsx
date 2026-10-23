@@ -32,8 +32,14 @@ export interface SessionMeta {
   /** Calorías reales (reloj o pulsera), si las conoces. */
   kcalReal?: number;
 }
+export interface SleepRecoveryEntry {
+  sleepHours: number;
+  quality: number;
+  energy: number;
+  fatigue: number;
+}
 export interface AppState {
-  version: 7;
+  version: 8;
   /** ml de agua por fecha (YYYY-MM-DD) */
   water: Record<string, number>;
   /** fecha → id de ejercicio → series registradas */
@@ -46,9 +52,11 @@ export interface AppState {
   shopping: Record<string, boolean>;
   /** fecha → marcas manuales y calorías reales */
   sessions: Record<string, SessionMeta>;
+  /** fecha → sueño total (incluidas siestas) y valoración subjetiva */
+  sleepRecovery: Record<string, SleepRecoveryEntry>;
 }
 
-const emptyState = (): AppState => ({ version: 7, water: {}, workoutLogs: {}, weights: [], bodyMeasurements: [], nutritionEntries: {}, shopping: {}, sessions: {} });
+const emptyState = (): AppState => ({ version: 8, water: {}, workoutLogs: {}, weights: [], bodyMeasurements: [], nutritionEntries: {}, shopping: {}, sessions: {}, sleepRecovery: {} });
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
@@ -121,6 +129,18 @@ function sanitize(raw: unknown): AppState {
       if (meta.manual || meta.kcalReal) base.sessions[date] = meta;
     }
   }
+  if (isRecord(raw.sleepRecovery)) {
+    for (const [date, value] of Object.entries(raw.sleepRecovery)) {
+      if (!isRecord(value)) continue;
+      const sleepHours = value.sleepHours;
+      const quality = value.quality;
+      const energy = value.energy;
+      const fatigue = value.fatigue;
+      if (typeof sleepHours !== "number" || !Number.isFinite(sleepHours) || sleepHours < 0 || sleepHours > 24) continue;
+      if (![quality, energy, fatigue].every((n) => typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= 5)) continue;
+      base.sleepRecovery[date] = { sleepHours, quality: quality as number, energy: energy as number, fatigue: fatigue as number };
+    }
+  }
   return base;
 }
 
@@ -138,6 +158,7 @@ interface StoreValue {
   removeNutritionEntry: (date: string, id: string) => void;
   /** Actualiza las marcas de un día. kcalReal null borra el valor. */
   setSession: (date: string, patch: { manual?: boolean; kcalReal?: number | null }) => void;
+  saveSleepRecovery: (date: string, entry: SleepRecoveryEntry) => void;
   exportJSON: () => string;
   importJSON: (text: string) => boolean;
   resetAll: () => void;
@@ -253,12 +274,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const saveSleepRecovery = useCallback((date: string, entry: SleepRecoveryEntry) => {
+    setState((s) => ({ ...s, sleepRecovery: { ...s.sleepRecovery, [date]: {
+      sleepHours: Math.round(Math.min(24, Math.max(0, entry.sleepHours)) * 2) / 2,
+      quality: Math.min(5, Math.max(1, Math.round(entry.quality))),
+      energy: Math.min(5, Math.max(1, Math.round(entry.energy))),
+      fatigue: Math.min(5, Math.max(1, Math.round(entry.fatigue))),
+    } } }));
+  }, []);
+
   const exportJSON = useCallback(() => JSON.stringify({ ...state, exportedAt: new Date().toISOString(), profile: PROFILE }, null, 2), [state]);
 
   const importJSON = useCallback((text: string) => {
     try {
       const parsed: unknown = JSON.parse(text);
-      if (!isRecord(parsed) || (parsed.version !== 5 && parsed.version !== 6 && parsed.version !== 7)) return false;
+      if (!isRecord(parsed) || ![5, 6, 7, 8].includes(parsed.version as number)) return false;
       setState(sanitize(parsed));
       return true;
     } catch {
@@ -269,8 +299,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const resetAll = useCallback(() => setState(emptyState()), []);
 
   const value = useMemo<StoreValue>(
-    () => ({ state, ready, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, setSession, exportJSON, importJSON, resetAll }),
-    [state, ready, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, setSession, exportJSON, importJSON, resetAll],
+    () => ({ state, ready, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, setSession, saveSleepRecovery, exportJSON, importJSON, resetAll }),
+    [state, ready, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, setSession, saveSleepRecovery, exportJSON, importJSON, resetAll],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
