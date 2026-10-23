@@ -115,7 +115,7 @@ export async function signOut(): Promise<void> {
   const session = readStoredSession();
   if (session?.access_token) {
     try {
-      await authRequest("logout", undefined, session.access_token);
+      await authRequest("logout", {}, session.access_token);
     } finally {
       storeSession(null);
     }
