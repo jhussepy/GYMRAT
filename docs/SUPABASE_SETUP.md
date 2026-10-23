@@ -39,7 +39,7 @@ El archivo `.env.example` solo documenta los nombres; no contiene credenciales r
 - Para desarrollo local, crea `.env.local` a partir de `.env.example` y completa los valores en tu ordenador. No subas `.env.local` a GitHub.
 - Tras cambiar variables en Vercel, genera un nuevo despliegue.
 
-No se deben solicitar ni incluir credenciales en una Pull Request. La conexión de la app, el inicio de sesión y la migración de los datos de `localStorage` se harán en una siguiente fase después de confirmar que el proyecto Supabase existe y que la migración se aplicó correctamente.
+No se deben solicitar ni incluir credenciales en una Pull Request. La ruta `/cuenta` implementa el registro y el inicio/cierre de sesión; la migración de los datos de `localStorage` y la sincronización con la tabla se implementarán y validarán por separado.
 
 ## 5. Verificación de autenticación
 
