@@ -12,6 +12,8 @@ import { TradingTab } from "./TradingTab";
 import { LogisticsTab } from "./LogisticsTab";
 import { ProgressTab } from "./ProgressTab";
 import { ThemeToggle } from "./ThemeToggle";
+import Link from "next/link";
+import { UserRound } from "lucide-react";
 
 const TABS = [
   { id: "dia", label: "Mi día", icon: Clock3 },
@@ -94,6 +96,9 @@ function Shell() {
               <p className="text-xs font-semibold tabular-nums text-chalk">{PROFILE.kcalTarget.toLocaleString("es")} kcal</p>
               <p className="text-[10px] text-muted">{PROFILE.proteinTargetG} g proteína objetivo</p>
             </div>
+            <Link href="/cuenta" aria-label="Mi cuenta" title="Mi cuenta" className="flex h-10 w-10 items-center justify-center rounded-xl border border-line/70 text-muted transition hover:border-flame hover:text-flame">
+              <UserRound size={18} aria-hidden />
+            </Link>
             <ThemeToggle />
           </div>
         </div>
