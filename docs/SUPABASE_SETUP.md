@@ -41,7 +41,7 @@ El archivo `.env.example` solo documenta los nombres; no contiene credenciales r
 
 No se deben solicitar ni incluir credenciales en una Pull Request. La ruta `/cuenta` implementa el registro y el inicio/cierre de sesión; la migración de los datos de `localStorage` y la sincronización con la tabla se implementarán y validarán por separado.
 
-## 5. Verificación de autenticación
+## 5. Verificación de autenticación y transferencia inicial
 
 - [ ] El proyecto Supabase está activo.
 - [ ] La tabla `public.user_app_state` existe.
@@ -51,5 +51,7 @@ No se deben solicitar ni incluir credenciales en una Pull Request. La ruta `/cue
 - [ ] No se ha añadido ninguna contraseña ni clave secreta al repositorio.
 - [ ] La ruta `/cuenta` permite crear una cuenta e iniciar/cerrar sesión.
 - [ ] En Authentication → URL Configuration, configura la URL de tu despliegue y las redirecciones permitidas para confirmación de correo si tu proyecto las exige.
+- [ ] En `/cuenta`, comprueba primero si existe una copia cloud antes de elegir subir o restaurar.
+- [ ] Si vas a subir, verifica que los datos locales pertenecen a la cuenta correcta; si vas a restaurar, exporta antes una copia local que quieras conservar.
 
-La pantalla de cuenta usa la URL y la clave pública del proyecto. No borra ni importa automáticamente el progreso local. **La sincronización cloud y la migración controlada de datos son pasos pendientes**: antes de activarlas se deben resolver los casos en los que ya existen datos locales, datos en la nube o ambos.
+La pantalla de cuenta usa la URL y la clave pública del proyecto. No borra ni importa automáticamente el progreso local. **La sincronización automática de cambios sigue pendiente.** La transferencia inicial permite subir o restaurar una copia completa con confirmación explícita; no combina automáticamente los registros local y cloud.
