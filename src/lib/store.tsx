@@ -169,7 +169,7 @@ const StoreContext = createContext<StoreValue | null>(null);
 export function StoreProvider({ children, userId }: { children: ReactNode; userId: string }) {
   const [state, setState] = useState<AppState>(emptyState);
   const [ready, setReady] = useState(false);
-  const [storageKey, setStorageKey] = useState<string | null>(null);
+  const [storageKey, setStorageKey] = useState<string | null>(null);\n  const [cloudReady, setCloudReady] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -182,7 +182,7 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
         if (response.ok) {
           const result = await response.json() as { userId?: string; state?: unknown };
           // Never accept a response for an identity other than the verified session.
-          if (result.userId === userId) cloudState = result.state ?? null;
+          if (result.userId === userId) {\n            cloudState = result.state ?? null;\n            cloudReadSucceeded = true;\n          }
         }
       } catch {
         // Local, per-user storage remains available if cloud sync is temporarily offline.
@@ -236,7 +236,7 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
       window.clearTimeout(saveTimer);
       controller.abort();
     };
-  }, [state, ready, storageKey]);
+  }, [state, ready, storageKey, cloudReady]);
 
   const addWater = useCallback((date: string, ml: number) => {
     setState((s) => {
