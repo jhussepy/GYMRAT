@@ -86,4 +86,10 @@ Para habilitar la sincronización, ejecuta `supabase/migrations/202610260001_gym
 3. Están marcadas para **Production** (y Preview si la usas).
 4. Después de cambiarlas, haz **Redeploy**: Vercel no aplica variables nuevas a despliegues ya hechos.
 
+**Error `Invalid header name or value … Headers must be ASCII`**
+
+La clave secreta tiene un carácter que no es ASCII. Casi siempre es porque se copió la versión **truncada** que muestra el panel de Clerk (algo como `sk_test_S…m3ZE`). Usa el botón de copiar de Clerk, que entrega la clave completa (`sk_test_` seguido de letras y números, sin puntos suspensivos).
+
+Si la sesión no se puede verificar, `/panel` muestra una pantalla de error (503) en vez de redirigir al login, para evitar un bucle de redirecciones. Los logs indican el problema exacto sin mostrar la clave.
+
 Mientras tanto, la portada pública sigue funcionando: el middleware solo corre en `/panel`, `/cuenta` y `/api`.
