@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Activity, ArrowLeft, CheckCircle2, Cloud, LogOut, ShieldCheck, UserRound } from "lucide-react";
 import Link from "next/link";
+import { SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { getCurrentSession, signInWithPassword, signOut, signUpWithPassword, type AuthSession } from "@/lib/supabase-auth";
 import { fetchCloudState, readLocalAppState, restoreCloudStateToLocal, uploadLocalStateToCloud, type CloudStateResult } from "@/lib/supabase-state";
 

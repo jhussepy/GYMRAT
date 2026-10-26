@@ -13,9 +13,10 @@
     "@fontsource-variable/inter": "^5.3.0",
     "@fontsource-variable/oswald": "^5.3.0",
     "lucide-react": "^0.454.0",
-    "next": "14.2.15",
+    "next": "14.2.25",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "@clerk/nextjs": "6.39.8"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
