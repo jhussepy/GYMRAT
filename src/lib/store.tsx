@@ -166,28 +166,85 @@ interface StoreValue {
 
 const StoreContext = createContext<StoreValue | null>(null);
 
-export function StoreProvider({ children }: { children: ReactNode }) {
+export function StoreProvider({ children, userId }: { children: ReactNode; userId: string }) {
   const [state, setState] = useState<AppState>(emptyState);
   const [ready, setReady] = useState(false);
+  const [storageKey, setStorageKey] = useState<string | null>(null);
+  const [cloudReady, setCloudReady] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setState(sanitize(JSON.parse(raw)));
-    } catch {
-      /* datos corruptos: se empieza de cero */
+    let active = true;
+    const userStorageKey = `${STORAGE_KEY}:${userId}`;
+
+    async function loadUserState() {
+      let cloudState: unknown = null;
+      let cloudReadSucceeded = false;
+      try {
+        const response = await fetch("/api/user-state", { cache: "no-store" });
+        if (response.ok) {
+          const result = await response.json() as { userId?: string; state?: unknown };
+          // Never accept a response for an identity other than the verified session.
+          if (result.userId === userId) {
+            cloudState = result.state ?? null;
+            cloudReadSucceeded = true;
+          }
+        }
+      } catch {
+        // Local, per-user storage remains available if cloud sync is temporarily offline.
+      }
+
+      let nextState = emptyState();
+      if (cloudState && typeof cloudState === "object" && !Array.isArray(cloudState)) {
+        nextState = sanitize(cloudState);
+      } else {
+        try {
+          const raw = window.localStorage.getItem(userStorageKey);
+          if (raw) nextState = sanitize(JSON.parse(raw));
+        } catch {
+          // A corrupt local snapshot is ignored without affecting another user's data.
+        }
+      }
+
+      if (!active) return;
+      setState(nextState);
+      setStorageKey(userStorageKey);
+      setCloudReady(cloudReadSucceeded);
+      setReady(true);
     }
-    setReady(true);
-  }, []);
+
+    setReady(false);
+    setStorageKey(null);
+    setCloudReady(false);
+    void loadUserState();
+    return () => { active = false; };
+  }, [userId]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !storageKey) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(storageKey, JSON.stringify(state));
     } catch {
       /* almacenamiento lleno o bloqueado */
     }
-  }, [state, ready]);
+
+    // Never overwrite cloud data unless the initial cloud read succeeded.
+    if (!cloudReady) return;
+    const controller = new AbortController();
+    const saveTimer = window.setTimeout(() => {
+      fetch("/api/user-state", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state }),
+        signal: controller.signal,
+      }).catch(() => {
+        // Keep local changes; the next page load retries the cloud read.
+      });
+    }, 700);
+    return () => {
+      window.clearTimeout(saveTimer);
+      controller.abort();
+    };
+  }, [state, ready, storageKey, cloudReady]);
 
   const addWater = useCallback((date: string, ml: number) => {
     setState((s) => {

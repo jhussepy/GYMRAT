@@ -1,6 +1,6 @@
 # GYMRAT · Coach Pro
 
-Plan diario de gimnasio, nutrición, agua, estudio de trading y peso. Next.js 14 (App Router) + TypeScript + Tailwind. Sin backend: todo se guarda en tu navegador.
+Aplicación personal de entrenamiento y seguimiento de progreso. Next.js 14 (App Router) + TypeScript + Tailwind. La portada pública vive en `/`; el panel privado vive en `/panel`, con autenticación Clerk y persistencia de estado por usuario en Supabase.
 
 ## Arrancar
 
@@ -21,7 +21,7 @@ git commit -m "Coach Pro v5: Next.js + TypeScript"
 git push origin main
 ```
 
-Para publicarlo, importa el repo en Vercel (no necesita variables de entorno).
+Para publicarlo, importa el repo en Vercel y configura las variables de entorno indicadas abajo.
 
 ## Dónde cambiar cosas
 
@@ -53,3 +53,24 @@ Para publicarlo, importa el repo en Vercel (no necesita variables de entorno).
 
 - Las calorías y la proteína de cada comida son **estimaciones** con porciones cocidas. Con el menú actual quedas por debajo de tu meta de calorías en todos los días; la app te muestra la diferencia.
 - Los datos no se sincronizan entre dispositivos: usa la copia JSON para moverlos.
+
+
+## Arquitectura pública, autenticación y datos
+
+- `/`: landing page pública de GYMRAT.
+- `/iniciar-sesion` y `/crear-cuenta`: autenticación administrada por Clerk.
+- `/panel`: panel privado, protegido por Clerk.
+- `/cuenta`: perfil y seguridad de Clerk.
+- `/api/user-state`: API de servidor; obtiene la identidad desde la sesión verificada de Clerk y lee/escribe únicamente la fila de ese usuario en Supabase.
+- El estado local se guarda bajo una clave namespaced por Clerk user ID. No se migra automáticamente la antigua clave global del navegador para evitar que otro usuario del mismo dispositivo herede datos personales.
+
+### Configuración necesaria en Vercel
+
+Mantén las variables de Clerk ya configuradas y añade estas variables **solo en el entorno de servidor**:
+
+- `SUPABASE_URL` (o reutiliza `NEXT_PUBLIC_SUPABASE_URL` si ya existe).
+- `SUPABASE_SERVICE_ROLE_KEY` — clave secreta de servidor; nunca debe llevar el prefijo `NEXT_PUBLIC_` ni usarse en el navegador.
+
+Antes de activar la sincronización, ejecuta `supabase/migrations/202610260001_gymrat_user_state.sql` en el SQL Editor del proyecto Supabase correcto. La tabla nueva usa el ID de Clerk como texto y no requiere mezclar identidades con Supabase Auth. El endpoint solo acepta el ID de usuario de la sesión verificada; no confía en un ID enviado por el cliente.
+
+**Importante sobre datos existentes:** los registros antiguos guardados en la clave global `coach_pro_v5` del navegador no se copian automáticamente. Antes de migrarlos, exporta una copia JSON desde la app y revisa el proceso para asociarlos explícitamente a la cuenta correcta.
