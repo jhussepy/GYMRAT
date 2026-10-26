@@ -26,7 +26,15 @@ async function databaseRequest(path: string, init: RequestInit = {}) {
 }
 
 export async function GET() {
-  const { userId } = await auth();
+  let userId: string | null;
+  try {
+    ({ userId } = await auth());
+  } catch {
+    return NextResponse.json(
+      { error: "No se pudo verificar la sesión. Revisa la configuración de Clerk en el servidor." },
+      { status: 503 },
+    );
+  }
   if (!userId) return NextResponse.json({ error: "Debes iniciar sesión." }, { status: 401 });
   try {
     const query = new URLSearchParams({ select: "state,updated_at", user_id: `eq.${userId}`, limit: "1" });
@@ -44,7 +52,15 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
-  const { userId } = await auth();
+  let userId: string | null;
+  try {
+    ({ userId } = await auth());
+  } catch {
+    return NextResponse.json(
+      { error: "No se pudo verificar la sesión. Revisa la configuración de Clerk en el servidor." },
+      { status: 503 },
+    );
+  }
   if (!userId) return NextResponse.json({ error: "Debes iniciar sesión." }, { status: 401 });
   let body: { state?: unknown };
   try {
