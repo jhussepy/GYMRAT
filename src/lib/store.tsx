@@ -169,7 +169,8 @@ const StoreContext = createContext<StoreValue | null>(null);
 export function StoreProvider({ children, userId }: { children: ReactNode; userId: string }) {
   const [state, setState] = useState<AppState>(emptyState);
   const [ready, setReady] = useState(false);
-  const [storageKey, setStorageKey] = useState<string | null>(null);\n  const [cloudReady, setCloudReady] = useState(false);
+  const [storageKey, setStorageKey] = useState<string | null>(null);
+  const [cloudReady, setCloudReady] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -177,12 +178,16 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
 
     async function loadUserState() {
       let cloudState: unknown = null;
+      let cloudReadSucceeded = false;
       try {
         const response = await fetch("/api/user-state", { cache: "no-store" });
         if (response.ok) {
           const result = await response.json() as { userId?: string; state?: unknown };
           // Never accept a response for an identity other than the verified session.
-          if (result.userId === userId) {\n            cloudState = result.state ?? null;\n            cloudReadSucceeded = true;\n          }
+          if (result.userId === userId) {
+            cloudState = result.state ?? null;
+            cloudReadSucceeded = true;
+          }
         }
       } catch {
         // Local, per-user storage remains available if cloud sync is temporarily offline.
@@ -203,11 +208,13 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
       if (!active) return;
       setState(nextState);
       setStorageKey(userStorageKey);
+      setCloudReady(cloudReadSucceeded);
       setReady(true);
     }
 
     setReady(false);
     setStorageKey(null);
+    setCloudReady(false);
     void loadUserState();
     return () => { active = false; };
   }, [userId]);
@@ -220,7 +227,8 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
       /* almacenamiento lleno o bloqueado */
     }
 
-    // The API derives user_id from the verified Clerk session, never from this payload.
+    // Never overwrite cloud data unless the initial cloud read succeeded.
+    if (!cloudReady) return;
     const controller = new AbortController();
     const saveTimer = window.setTimeout(() => {
       fetch("/api/user-state", {
@@ -229,7 +237,7 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
         body: JSON.stringify({ state }),
         signal: controller.signal,
       }).catch(() => {
-        // Keep local changes; the next edit/reload can retry cloud sync.
+        // Keep local changes; the next page load retries the cloud read.
       });
     }, 700);
     return () => {
