@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, Clock3, Dumbbell, Scale, Timer, TrendingUp, Utensils, type LucideIcon } from "lucide-react";
+import { Activity, AlertTriangle, CheckCircle2, Clock3, Cloud, CloudOff, Dumbbell, LoaderCircle, Scale, Timer, TrendingUp, Utensils, type LucideIcon } from "lucide-react";
 import { PROFILE } from "@/lib/config";
-import { StoreProvider } from "@/lib/store";
+import { StoreProvider, useStore } from "@/lib/store";
 import { RestTimerProvider, useRestTimer } from "./RestTimer";
 import { ClockTab } from "./ClockTab";
 import { WorkoutTab } from "./WorkoutTab";
@@ -38,6 +38,7 @@ export function App({ userId }: { userId: string }) {
 function Shell() {
   const [tab, setTab] = useState<TabId>("dia");
   const { showTimer } = useRestTimer();
+  const { ready, cloudSyncStatus, cloudSyncMessage } = useStore();
 
   useEffect(() => {
     const id = window.location.hash.slice(1);
@@ -103,6 +104,31 @@ function Shell() {
           </div>
         </div>
       </header>
+
+      {ready && (
+        <div className={`flex items-start gap-3 border-b px-4 py-3 text-sm sm:px-6 lg:px-8 ${
+          cloudSyncStatus === "error" || cloudSyncStatus === "local-only"
+            ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
+            : cloudSyncStatus === "synced"
+              ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-200"
+              : "border-line/70 bg-raised/40 text-muted"
+        }`} role={cloudSyncStatus === "error" || cloudSyncStatus === "local-only" ? "alert" : "status"} aria-live="polite">
+          {cloudSyncStatus === "loading" && <LoaderCircle size={18} className="mt-0.5 shrink-0 animate-spin" aria-hidden />}
+          {cloudSyncStatus === "local-only" && <CloudOff size={18} className="mt-0.5 shrink-0" aria-hidden />}
+          {cloudSyncStatus === "saving" && <Cloud size={18} className="mt-0.5 shrink-0 animate-pulse" aria-hidden />}
+          {cloudSyncStatus === "synced" && <CheckCircle2 size={18} className="mt-0.5 shrink-0" aria-hidden />}
+          {cloudSyncStatus === "error" && <AlertTriangle size={18} className="mt-0.5 shrink-0" aria-hidden />}
+          <div className="min-w-0">
+            <p className="font-semibold">
+              {cloudSyncStatus === "local-only" && "Guardado solo en este dispositivo"}
+              {cloudSyncStatus === "saving" && "Sincronizando cambios…"}
+              {cloudSyncStatus === "synced" && "Datos sincronizados con la nube"}
+              {cloudSyncStatus === "error" && "No se pudo sincronizar"}
+            </p>
+            {cloudSyncMessage && <p className="mt-1 break-words text-xs leading-5 opacity-90">{cloudSyncMessage} Exporta una copia JSON si necesitas proteger tus datos mientras se resuelve.</p>}
+          </div>
+        </div>
+      )}
 
       <main id="contenido" className="flex-1 px-4 pb-28 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pb-12">
         {tab === "dia" && <ClockTab onNavigate={go} />}
