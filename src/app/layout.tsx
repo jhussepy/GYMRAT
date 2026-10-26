@@ -22,12 +22,18 @@ export const viewport: Viewport = {
 const themeScript = `(function(){try{var t=localStorage.getItem("coach_theme");if(t!=="light"&&t!=="dark"){t=window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";}document.documentElement.setAttribute("data-theme",t);}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const clerkPublishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
   return (
     <html lang="es" data-theme="dark" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-screen font-sans antialiased"><ClerkProvider>{children}</ClerkProvider></body>
+      <body className="min-h-screen font-sans antialiased">
+        {clerkPublishableKey ? (
+          <ClerkProvider publishableKey={clerkPublishableKey}>{children}</ClerkProvider>
+        ) : children}
+      </body>
     </html>
   );
 }
