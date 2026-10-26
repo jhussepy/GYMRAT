@@ -25,9 +25,9 @@ const TABS = [
 
 export type TabId = (typeof TABS)[number]["id"];
 
-export function App() {
+export function App({ userId }: { userId: string }) {
   return (
-    <StoreProvider>
+    <StoreProvider userId={userId}>
       <RestTimerProvider>
         <Shell />
       </RestTimerProvider>
