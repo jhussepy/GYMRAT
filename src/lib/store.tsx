@@ -144,9 +144,13 @@ function sanitize(raw: unknown): AppState {
   return base;
 }
 
+export type CloudSyncStatus = "loading" | "local-only" | "saving" | "synced" | "error";
+
 interface StoreValue {
   state: AppState;
   ready: boolean;
+  cloudSyncStatus: CloudSyncStatus;
+  cloudSyncMessage: string | null;
   addWater: (date: string, ml: number) => void;
   setSetLog: (date: string, exerciseId: string, index: number, field: keyof SetLog, value: string) => void;
   saveWeight: (date: string, kg: number) => void;
@@ -171,6 +175,8 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
   const [ready, setReady] = useState(false);
   const [storageKey, setStorageKey] = useState<string | null>(null);
   const [cloudReady, setCloudReady] = useState(false);
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<CloudSyncStatus>("loading");
+  const [cloudSyncMessage, setCloudSyncMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -179,6 +185,7 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
     async function loadUserState() {
       let cloudState: unknown = null;
       let cloudReadSucceeded = false;
+      let readFailure = "No se pudo verificar la sincronización en la nube.";
       try {
         const response = await fetch("/api/user-state", { cache: "no-store" });
         if (response.ok) {
@@ -187,10 +194,15 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
           if (result.userId === userId) {
             cloudState = result.state ?? null;
             cloudReadSucceeded = true;
+          } else {
+            readFailure = "La respuesta de la nube no coincide con la cuenta actual. Los datos permanecen solo en este dispositivo.";
           }
+        } else {
+          const result = await response.json().catch(() => null) as { error?: string } | null;
+          readFailure = result?.error || `No se pudo leer la nube (HTTP ${response.status}). Los cambios locales siguen disponibles.`;
         }
       } catch {
-        // Local, per-user storage remains available if cloud sync is temporarily offline.
+        readFailure = "No hay conexión con la nube. Los cambios se conservan en este dispositivo.";
       }
 
       let nextState = emptyState();
@@ -209,12 +221,16 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
       setState(nextState);
       setStorageKey(userStorageKey);
       setCloudReady(cloudReadSucceeded);
+      setCloudSyncStatus(cloudReadSucceeded ? "synced" : "local-only");
+      setCloudSyncMessage(cloudReadSucceeded ? null : readFailure);
       setReady(true);
     }
 
     setReady(false);
     setStorageKey(null);
     setCloudReady(false);
+    setCloudSyncStatus("loading");
+    setCloudSyncMessage(null);
     void loadUserState();
     return () => { active = false; };
   }, [userId]);
@@ -230,15 +246,27 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
     // Never overwrite cloud data unless the initial cloud read succeeded.
     if (!cloudReady) return;
     const controller = new AbortController();
-    const saveTimer = window.setTimeout(() => {
-      fetch("/api/user-state", {
+    const saveTimer = window.setTimeout(async () => {
+      setCloudSyncStatus("saving");
+      setCloudSyncMessage(null);
+      try {
+        const response = await fetch("/api/user-state", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ state }),
-        signal: controller.signal,
-      }).catch(() => {
-        // Keep local changes; the next page load retries the cloud read.
-      });
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          const result = await response.json().catch(() => null) as { error?: string } | null;
+          throw new Error(result?.error || `Error de sincronización (HTTP ${response.status}).`);
+        }
+        setCloudSyncStatus("synced");
+        setCloudSyncMessage(null);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setCloudSyncStatus("error");
+        setCloudSyncMessage(error instanceof Error ? error.message : "No se pudieron guardar los cambios en la nube. La copia local se conserva.");
+      }
     }, 700);
     return () => {
       window.clearTimeout(saveTimer);
@@ -356,8 +384,8 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
   const resetAll = useCallback(() => setState(emptyState()), []);
 
   const value = useMemo<StoreValue>(
-    () => ({ state, ready, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, setSession, saveSleepRecovery, exportJSON, importJSON, resetAll }),
-    [state, ready, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, setSession, saveSleepRecovery, exportJSON, importJSON, resetAll],
+    () => ({ state, ready, cloudSyncStatus, cloudSyncMessage, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, setSession, saveSleepRecovery, exportJSON, importJSON, resetAll }),
+    [state, ready, cloudSyncStatus, cloudSyncMessage, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, setSession, saveSleepRecovery, exportJSON, importJSON, resetAll],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
