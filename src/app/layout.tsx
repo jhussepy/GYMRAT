@@ -5,8 +5,8 @@ import "@fontsource-variable/inter";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Coach Pro · Gym, nutrición y progreso",
-  description: "Tu día de 02:30 a 22:00 en un solo lugar: rutina de Smart Fit, tápers, agua, estudio de trading y peso.",
+  title: "GYMRAT · Entrena, registra y evoluciona",
+  description: "GYMRAT reúne tus entrenamientos, medidas corporales, nutrición y hábitos para ayudarte a seguir tu progreso.",
 };
 
 export const viewport: Viewport = {
