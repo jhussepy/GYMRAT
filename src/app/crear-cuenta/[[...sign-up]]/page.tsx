@@ -10,9 +10,5 @@ export default function SignUpPage() {
     );
   }
 
-  return (
-    <main className="flex min-h-screen items-center justify-center px-4 py-10">
-      <SignUp routing="path" path="/crear-cuenta" signInUrl="/iniciar-sesion" />
-    </main>
-  );
+  return <main className="flex min-h-screen items-center justify-center px-4 py-10"><SignUp routing="path" path="/crear-cuenta" signInUrl="/iniciar-sesion" forceRedirectUrl="/panel" /></main>;
 }
