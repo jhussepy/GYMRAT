@@ -141,9 +141,18 @@ export default function HomePage() {
           <div className="absolute -inset-8 bg-[#E63946]/[0.07] blur-[70px]" />
           <div className="hero-image-frame relative aspect-[4/4.2] overflow-hidden border border-white/10 bg-[#1A1A1A] sm:aspect-[5/4] lg:aspect-[0.95/1]">
             <img
-              src="https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=1400&q=85"
-              alt="Atleta entrenando con pesas en un gimnasio industrial"
-              className="absolute inset-0 h-full w-full object-cover object-center grayscale-[35%]"
+              src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1400&q=85"
+              alt="Atleta entrenando en un gimnasio con equipamiento de fuerza"
+              className="absolute inset-0 z-0 h-full w-full object-cover object-center opacity-100 grayscale-[20%]"
+              loading="eager"
+              fetchPriority="high"
+              onError={(event) => {
+                const image = event.currentTarget;
+                if (!image.dataset.fallbackTried) {
+                  image.dataset.fallbackTried = "true";
+                  image.src = "https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?auto=format&fit=crop&w=1400&q=85";
+                }
+              }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-[#111111]/55 via-transparent to-[#111111]/10" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#111111] via-transparent to-[#111111]/15" />
