@@ -74,3 +74,16 @@ Mantén las variables de Clerk ya configuradas y añade estas variables **solo e
 Para habilitar la sincronización, ejecuta `supabase/migrations/202610260001_gymrat_user_state.sql` en el SQL Editor del proyecto Supabase correcto y configura las variables de servidor en Vercel. Consulta `docs/SUPABASE_SETUP.md` para los pasos y límites actuales. La tabla nueva usa el ID de Clerk como texto y no requiere mezclar identidades con Supabase Auth. El endpoint solo acepta el ID de usuario de la sesión verificada; no confía en un ID enviado por el cliente.
 
 **Importante sobre datos existentes:** los registros antiguos guardados en la clave global `coach_pro_v5` del navegador no se copian automáticamente. Antes de migrarlos, exporta una copia JSON desde la app y revisa el proceso para asociarlos explícitamente a la cuenta correcta.
+
+## Solución de problemas: Clerk
+
+**Error 500 `Handshake token verification failed … code=401`**
+
+`CLERK_SECRET_KEY` no corresponde a la instancia de la clave pública (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`). Revisa en Vercel (Settings → Environment Variables):
+
+1. Las dos claves salen de la **misma** aplicación e instancia de Clerk (`pk_test_…` con `sk_test_…`, o `pk_live_…` con `sk_live_…`).
+2. Pégalas sin comillas, espacios ni saltos de línea.
+3. Están marcadas para **Production** (y Preview si la usas).
+4. Después de cambiarlas, haz **Redeploy**: Vercel no aplica variables nuevas a despliegues ya hechos.
+
+Mientras tanto, la portada pública sigue funcionando: el middleware solo corre en `/panel`, `/cuenta` y `/api`.
