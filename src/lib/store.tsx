@@ -60,9 +60,132 @@ const emptyState = (): AppState => ({ version: 8, water: {}, workoutLogs: {}, we
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
-/** Valida datos externos (
-…[1 chars truncated — re-run with head/grep/tail for full output]…
-o se pudo verificar la sincronización en la nube.";
+/** Valida datos externos (localStorage o archivo importado) y descarta lo que no encaje. */
+function sanitize(raw: unknown): AppState {
+  const base = emptyState();
+  if (!isRecord(raw)) return base;
+  if (isRecord(raw.water)) {
+    for (const [k, v] of Object.entries(raw.water)) if (typeof v === "number" && Number.isFinite(v)) base.water[k] = v;
+  }
+  if (isRecord(raw.workoutLogs)) {
+    for (const [date, day] of Object.entries(raw.workoutLogs)) {
+      if (!isRecord(day)) continue;
+      base.workoutLogs[date] = {};
+      for (const [ex, sets] of Object.entries(day)) {
+        if (!Array.isArray(sets)) continue;
+        base.workoutLogs[date][ex] = sets
+          .filter(isRecord)
+          .map((x) => ({ kg: typeof x.kg === "string" ? x.kg : "", reps: typeof x.reps === "string" ? x.reps : "" }));
+      }
+    }
+  }
+  if (Array.isArray(raw.weights)) {
+    base.weights = raw.weights
+      .filter(isRecord)
+      .filter((w) => typeof w.date === "string" && typeof w.kg === "number" && Number.isFinite(w.kg))
+      .map((w) => ({ date: w.date as string, kg: w.kg as number }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+  if (Array.isArray(raw.bodyMeasurements)) {
+    base.bodyMeasurements = raw.bodyMeasurements
+      .filter(isRecord)
+      .filter((m) => typeof m.date === "string" && typeof m.weightKg === "number" && Number.isFinite(m.weightKg))
+      .map((m) => {
+        const entry: BodyMeasurementEntry = { date: m.date as string, weightKg: m.weightKg as number };
+        if (typeof m.waistCm === "number" && Number.isFinite(m.waistCm) && m.waistCm > 0) entry.waistCm = m.waistCm;
+        if (typeof m.bodyFatPercent === "number" && Number.isFinite(m.bodyFatPercent) && m.bodyFatPercent > 0 && m.bodyFatPercent < 75) entry.bodyFatPercent = m.bodyFatPercent;
+        if (typeof m.skeletalMuscleKg === "number" && Number.isFinite(m.skeletalMuscleKg) && m.skeletalMuscleKg > 0) entry.skeletalMuscleKg = m.skeletalMuscleKg;
+        if (typeof m.visceralFatLevel === "number" && Number.isFinite(m.visceralFatLevel) && m.visceralFatLevel >= 0) entry.visceralFatLevel = m.visceralFatLevel;
+        return entry;
+      })
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+  if (isRecord(raw.nutritionEntries)) {
+    for (const [date, entries] of Object.entries(raw.nutritionEntries)) {
+      if (!Array.isArray(entries)) continue;
+      base.nutritionEntries[date] = entries
+        .filter(isRecord)
+        .filter((e) => typeof e.id === "string" && typeof e.name === "string" && e.name.trim().length > 0
+          && typeof e.kcal === "number" && Number.isFinite(e.kcal) && e.kcal >= 0
+          && typeof e.protein === "number" && Number.isFinite(e.protein) && e.protein >= 0)
+        .map((e) => ({
+          id: e.id as string,
+          date,
+          name: (e.name as string).trim().slice(0, 100),
+          kcal: Math.round(e.kcal as number),
+          protein: Math.round((e.protein as number) * 10) / 10,
+        }));
+    }
+  }
+  if (isRecord(raw.shopping)) {
+    for (const [k, v] of Object.entries(raw.shopping)) if (typeof v === "boolean") base.shopping[k] = v;
+  }
+  if (isRecord(raw.sessions)) {
+    for (const [date, v] of Object.entries(raw.sessions)) {
+      if (!isRecord(v)) continue;
+      const meta: SessionMeta = {};
+      if (v.manual === true) meta.manual = true;
+      if (typeof v.kcalReal === "number" && Number.isFinite(v.kcalReal) && v.kcalReal > 0) meta.kcalReal = Math.round(v.kcalReal);
+      if (meta.manual || meta.kcalReal) base.sessions[date] = meta;
+    }
+  }
+  if (isRecord(raw.sleepRecovery)) {
+    for (const [date, value] of Object.entries(raw.sleepRecovery)) {
+      if (!isRecord(value)) continue;
+      const sleepHours = value.sleepHours;
+      const quality = value.quality;
+      const energy = value.energy;
+      const fatigue = value.fatigue;
+      if (typeof sleepHours !== "number" || !Number.isFinite(sleepHours) || sleepHours < 0 || sleepHours > 24) continue;
+      if (![quality, energy, fatigue].every((n) => typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= 5)) continue;
+      base.sleepRecovery[date] = { sleepHours, quality: quality as number, energy: energy as number, fatigue: fatigue as number };
+    }
+  }
+  return base;
+}
+
+export type CloudSyncStatus = "loading" | "local-only" | "saving" | "synced" | "error";
+
+interface StoreValue {
+  state: AppState;
+  ready: boolean;
+  cloudSyncStatus: CloudSyncStatus;
+  cloudSyncMessage: string | null;
+  addWater: (date: string, ml: number) => void;
+  setSetLog: (date: string, exerciseId: string, index: number, field: keyof SetLog, value: string) => void;
+  saveWeight: (date: string, kg: number) => void;
+  saveBodyMeasurement: (entry: BodyMeasurementEntry) => void;
+  removeBodyMeasurement: (date: string) => void;
+  removeWeight: (date: string) => void;
+  toggleShopping: (id: string) => void;
+  addNutritionEntry: (entry: NutritionEntry) => void;
+  removeNutritionEntry: (date: string, id: string) => void;
+  /** Actualiza las marcas de un día. kcalReal null borra el valor. */
+  setSession: (date: string, patch: { manual?: boolean; kcalReal?: number | null }) => void;
+  saveSleepRecovery: (date: string, entry: SleepRecoveryEntry) => void;
+  exportJSON: () => string;
+  importJSON: (text: string) => boolean;
+  resetAll: () => void;
+}
+
+const StoreContext = createContext<StoreValue | null>(null);
+
+export function StoreProvider({ children, userId }: { children: ReactNode; userId: string }) {
+  const [state, setState] = useState<AppState>(emptyState);
+  const [ready, setReady] = useState(false);
+  const [storageKey, setStorageKey] = useState<string | null>(null);
+  const [cloudReady, setCloudReady] = useState(false);
+  const [cloudSyncStatus, setCloudSyncStatus] = useState<CloudSyncStatus>("loading");
+  const [cloudSyncMessage, setCloudSyncMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const userStorageKey = `${STORAGE_KEY}:${userId}`;
+
+    async function loadUserState() {
+      let cloudState: unknown = null;
+      let cloudReadSucceeded = false;
+      let readFailure = "No se pudo verificar la sincronización en la nube.";
       try {
         const response = await fetch("/api/user-state", { cache: "no-store" });
         if (response.ok) {
