@@ -1,6 +1,6 @@
 # GYMRAT · Coach Pro
 
-Aplicación personal de entrenamiento y seguimiento de progreso. Next.js 14 (App Router) + TypeScript + Tailwind. La portada pública vive en `/`; el panel privado vive en `/panel`, con autenticación Clerk y persistencia de estado por usuario en Supabase.
+Aplicación personal de entrenamiento y seguimiento de progreso. Next.js 15 (App Router) + TypeScript + Tailwind. La portada pública vive en `/`; el panel privado vive en `/panel`, con autenticación Clerk y persistencia de estado por usuario en Supabase.
 
 ## Arrancar
 
@@ -34,7 +34,7 @@ Para publicarlo, importa el repo en Vercel y configura las variables de entorno 
 ## Qué cambió respecto al HTML v4.5
 
 - Navegación inferior en móvil: ya se llega a las 6 secciones.
-- Todo se guarda (agua por día, series, pesos, compras) en `localStorage`, con copia de seguridad en JSON (exportar e importar).
+- El estado se guarda localmente en `localStorage` por usuario, con copia de seguridad en JSON (exportar e importar). Cuando Clerk y Supabase están configurados y la lectura inicial en la nube funciona, el estado también se sincroniza con Supabase.
 - Reloj de 24 h real: bloque actual, tiempo restante, cafeína permitida o cortada y marcador de la hora, calculados desde tu horario.
 - Cronómetro funcional: inicia al tocar el botón de cada serie, pausa, reinicia, y avisa con sonido y vibración.
 - Registro por serie (kg y reps) con la referencia de la última sesión como sugerencia.
@@ -52,7 +52,7 @@ Para publicarlo, importa el repo en Vercel y configura las variables de entorno 
 ## Notas
 
 - Las calorías y la proteína de cada comida son **estimaciones** con porciones cocidas. Con el menú actual quedas por debajo de tu meta de calorías en todos los días; la app te muestra la diferencia.
-- Los datos no se sincronizan entre dispositivos: usa la copia JSON para moverlos.
+- La sincronización entre dispositivos depende de que Supabase esté configurado correctamente en Vercel y de que se haya aplicado la migración `supabase/migrations/202610260001_gymrat_user_state.sql`. Si no está configurado o la API no puede leer la nube, la app conserva los datos locales; no des por confirmada la sincronización sin probarla.
 
 
 ## Arquitectura pública, autenticación y datos
@@ -71,6 +71,6 @@ Mantén las variables de Clerk ya configuradas y añade estas variables **solo e
 - `SUPABASE_URL` (o reutiliza `NEXT_PUBLIC_SUPABASE_URL` si ya existe).
 - `SUPABASE_SERVICE_ROLE_KEY` — clave secreta de servidor; nunca debe llevar el prefijo `NEXT_PUBLIC_` ni usarse en el navegador.
 
-Antes de activar la sincronización, ejecuta `supabase/migrations/202610260001_gymrat_user_state.sql` en el SQL Editor del proyecto Supabase correcto. La tabla nueva usa el ID de Clerk como texto y no requiere mezclar identidades con Supabase Auth. El endpoint solo acepta el ID de usuario de la sesión verificada; no confía en un ID enviado por el cliente.
+Para habilitar la sincronización, ejecuta `supabase/migrations/202610260001_gymrat_user_state.sql` en el SQL Editor del proyecto Supabase correcto y configura las variables de servidor en Vercel. Consulta `docs/SUPABASE_SETUP.md` para los pasos y límites actuales. La tabla nueva usa el ID de Clerk como texto y no requiere mezclar identidades con Supabase Auth. El endpoint solo acepta el ID de usuario de la sesión verificada; no confía en un ID enviado por el cliente.
 
 **Importante sobre datos existentes:** los registros antiguos guardados en la clave global `coach_pro_v5` del navegador no se copian automáticamente. Antes de migrarlos, exporta una copia JSON desde la app y revisa el proceso para asociarlos explícitamente a la cuenta correcta.
