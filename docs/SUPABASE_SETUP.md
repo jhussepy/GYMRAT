@@ -55,3 +55,19 @@ No se deben solicitar ni incluir credenciales en una Pull Request. La ruta `/cue
 - [ ] Si vas a subir, verifica que los datos locales pertenecen a la cuenta correcta; si vas a restaurar, exporta antes una copia local que quieras conservar.
 
 La pantalla de cuenta usa la URL y la clave pública del proyecto. No borra ni importa automáticamente el progreso local. **La sincronización automática de cambios sigue pendiente.** La transferencia inicial permite subir o restaurar una copia completa con confirmación explícita; no combina automáticamente los registros local y cloud.
+
+
+## Clerk + Google (rama `feat/clerk-google-auth`)
+
+Esta rama incorpora el proveedor de Clerk, las rutas de inicio de sesión/registro y una opción de inicio con Google en `/cuenta`. Configura en Vercel y en tu entorno local las variables siguientes usando los valores de la instancia Development de Clerk:
+
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `CLERK_SECRET_KEY`
+
+No guardes claves reales en GitHub. Habilita Google como proveedor en Clerk y configura las URLs de redirección permitidas para tus entornos.
+
+### Migración de identificadores de Supabase
+
+Antes de usar Clerk para guardar estado en la nube, aplica la migración `supabase/migrations/20261026120000_support_clerk_user_ids.sql` desde el SQL Editor de Supabase. Convierte `user_id` de UUID a texto y conserva las filas existentes, además de actualizar las políticas RLS para comparar con el `sub` del JWT. La integración Clerk–Supabase debe seguir habilitada y los tokens deben incluir el rol `authenticated`.
+
+**Limitación importante de esta etapa:** el botón de Clerk inicia autenticación, pero las operaciones actuales de sincronización de estado en `src/lib/supabase-state.ts` todavía obtienen el token de la sesión de Supabase Auth tradicional. Por tanto, no consideres completada la sincronización del progreso para usuarios Clerk hasta que se conecte el token de Clerk a esas peticiones y se verifique el flujo de lectura/escritura. No elimines la autenticación antigua ni los datos locales durante esa transición.
