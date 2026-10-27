@@ -52,6 +52,20 @@ Para desarrollo local, utiliza un archivo .env.local ignorado por Git. Después 
 - [ ] Inicia sesión con un usuario B y comprueba que no recibe los datos del usuario A.
 - [ ] Si alguna comprobación falla, exporta una copia JSON antes de seguir probando y no borres los datos locales.
 
+## Solución de problemas: "Guardado solo en este dispositivo"
+
+El aviso muestra el motivo exacto que devuelve el servidor. Los más habituales:
+
+| Mensaje | Qué hacer |
+|---|---|
+| Falta configurar SUPABASE_SERVICE_ROLE_KEY | Añádela en Vercel (sin `NEXT_PUBLIC_`), para el entorno que estés usando, y vuelve a desplegar. Las variables públicas (`NEXT_PUBLIC_SUPABASE_…`) no la reemplazan. |
+| contiene la clave pública | Pegaste la clave publicable o `anon`. Usa la secreta (`sb_secret_…`) o `service_role`. |
+| contiene caracteres no válidos | Copiaste la clave truncada con «…». Cópiala completa. |
+| SUPABASE_URL debe empezar por https:// | Usa la «Project URL» de Supabase → Settings → API. |
+| relation "gymrat_user_state" does not exist | Falta ejecutar la migración de la sección 2. |
+
+Las variables nuevas solo se aplican a despliegues hechos **después** de guardarlas.
+
 ## Nota sobre migraciones anteriores
 
 El repositorio conserva migraciones históricas relacionadas con public.user_app_state y Supabase Auth. La API actual de Clerk utiliza public.gymrat_user_state; no ejecutes migraciones antiguas como sustituto de la migración actual. Si ya aplicaste migraciones anteriores en tu base de datos, no las reviertas ni elimines tablas sin revisar primero los datos existentes.

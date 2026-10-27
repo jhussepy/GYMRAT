@@ -1,27 +1,16 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { readSupabaseConfig, supabaseHeaders } from "@/lib/supabase-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function config() {
-  const url = (process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/\/$/, "");
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Falta configurar SUPABASE_URL (o NEXT_PUBLIC_SUPABASE_URL) y SUPABASE_SERVICE_ROLE_KEY en el servidor.");
-  return { url, key };
-}
-
 async function databaseRequest(path: string, init: RequestInit = {}) {
-  const { url, key } = config();
+  const { url, key } = readSupabaseConfig();
   return fetch(`${url}/rest/v1/${path}`, {
     ...init,
     cache: "no-store",
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-      ...init.headers,
-    },
+    headers: { ...supabaseHeaders(key), ...init.headers },
   });
 }
 
