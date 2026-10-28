@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { weekdayFromDate } from "@/lib/config";
-import { WORKOUT_FOCUS } from "@/lib/data";
-import { useStore } from "@/lib/store";
+import { planFor } from "@/lib/plan";
+import { useProfile, useStore } from "@/lib/store";
 import { addDays, computeSummary, parseISO, sessionStats, STRENGTH_MET, type SessionStats } from "@/lib/training";
 import { todayISO } from "@/lib/time";
 import { Card, ProgressBar, SectionTitle } from "./ui";
@@ -17,6 +17,7 @@ const longDate = (date: string) => parseISO(date).toLocaleDateString("es", { wee
 
 export function TrainingCalendar() {
   const { state, setSession } = useStore();
+  const profile = useProfile();
   const [today, setToday] = useState("");
   const [view, setView] = useState<{ y: number; m: number } | null>(null);
   const [selected, setSelected] = useState("");
@@ -62,8 +63,8 @@ export function TrainingCalendar() {
 
   const sel = sessionStats(selected, state);
   const isFuture = selected > today;
-  const plan = weekdayFromDate(parseISO(selected));
-  const focus = plan ? WORKOUT_FOCUS[plan] : "Descanso";
+  const plan = planFor(profile.trainingDays, weekdayFromDate(parseISO(selected)));
+  const focus = plan ? plan.focus : "Descanso";
 
   return (
     <Card>

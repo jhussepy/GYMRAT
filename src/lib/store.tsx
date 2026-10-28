@@ -1,7 +1,9 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { PROFILE, STORAGE_KEY } from "./config";
+import { STORAGE_KEY } from "./config";
+import type { ScheduleItem } from "./data";
+import { buildSchedule, sanitizeProfile, type UserProfile } from "./profile";
 
 export interface SetLog {
   kg: string;
@@ -39,7 +41,7 @@ export interface SleepRecoveryEntry {
   fatigue: number;
 }
 export interface AppState {
-  version: 8;
+  version: 9;
   /** ml de agua por fecha (YYYY-MM-DD) */
   water: Record<string, number>;
   /** fecha → id de ejercicio → series registradas */
@@ -54,9 +56,11 @@ export interface AppState {
   sessions: Record<string, SessionMeta>;
   /** fecha → sueño total (incluidas siestas) y valoración subjetiva */
   sleepRecovery: Record<string, SleepRecoveryEntry>;
+  /** Datos personales y metas del usuario. Sin perfil, la app muestra el registro inicial. */
+  profile?: UserProfile;
 }
 
-const emptyState = (): AppState => ({ version: 8, water: {}, workoutLogs: {}, weights: [], bodyMeasurements: [], nutritionEntries: {}, shopping: {}, sessions: {}, sleepRecovery: {} });
+const emptyState = (): AppState => ({ version: 9, water: {}, workoutLogs: {}, weights: [], bodyMeasurements: [], nutritionEntries: {}, shopping: {}, sessions: {}, sleepRecovery: {} });
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
@@ -141,6 +145,8 @@ function sanitize(raw: unknown): AppState {
       base.sleepRecovery[date] = { sleepHours, quality: quality as number, energy: energy as number, fatigue: fatigue as number };
     }
   }
+  const profile = sanitizeProfile(raw.profile);
+  if (profile) base.profile = profile;
   return base;
 }
 
@@ -163,6 +169,7 @@ interface StoreValue {
   /** Actualiza las marcas de un día. kcalReal null borra el valor. */
   setSession: (date: string, patch: { manual?: boolean; kcalReal?: number | null }) => void;
   saveSleepRecovery: (date: string, entry: SleepRecoveryEntry) => void;
+  saveProfile: (profile: UserProfile) => void;
   exportJSON: () => string;
   importJSON: (text: string) => boolean;
   resetAll: () => void;
@@ -368,24 +375,31 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
     } } }));
   }, []);
 
-  const exportJSON = useCallback(() => JSON.stringify({ ...state, exportedAt: new Date().toISOString(), profile: PROFILE }, null, 2), [state]);
+  const saveProfile = useCallback((profile: UserProfile) => {
+    setState((s) => ({ ...s, profile }));
+  }, []);
+
+  const exportJSON = useCallback(() => JSON.stringify({ ...state, exportedAt: new Date().toISOString() }, null, 2), [state]);
 
   const importJSON = useCallback((text: string) => {
     try {
       const parsed: unknown = JSON.parse(text);
-      if (!isRecord(parsed) || ![5, 6, 7, 8].includes(parsed.version as number)) return false;
-      setState(sanitize(parsed));
+      if (!isRecord(parsed) || ![5, 6, 7, 8, 9].includes(parsed.version as number)) return false;
+      const incoming = sanitize(parsed);
+      // Una copia antigua sin perfil no debe borrar el perfil actual.
+      setState((current) => ({ ...incoming, profile: incoming.profile ?? current.profile }));
       return true;
     } catch {
       return false;
     }
   }, []);
 
-  const resetAll = useCallback(() => setState(emptyState()), []);
+  // Borrar todo conserva tu perfil: son tus ajustes de cuenta, no tus registros.
+  const resetAll = useCallback(() => setState((s) => ({ ...emptyState(), profile: s.profile })), []);
 
   const value = useMemo<StoreValue>(
-    () => ({ state, ready, cloudSyncStatus, cloudSyncMessage, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, setSession, saveSleepRecovery, exportJSON, importJSON, resetAll }),
-    [state, ready, cloudSyncStatus, cloudSyncMessage, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, setSession, saveSleepRecovery, exportJSON, importJSON, resetAll],
+    () => ({ state, ready, cloudSyncStatus, cloudSyncMessage, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, setSession, saveSleepRecovery, saveProfile, exportJSON, importJSON, resetAll }),
+    [state, ready, cloudSyncStatus, cloudSyncMessage, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, setSession, saveSleepRecovery, saveProfile, exportJSON, importJSON, resetAll],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
@@ -395,4 +409,20 @@ export function useStore(): StoreValue {
   const ctx = useContext(StoreContext);
   if (!ctx) throw new Error("useStore debe usarse dentro de <StoreProvider>");
   return ctx;
+}
+
+/** Perfil del usuario. Solo se usa dentro de la app, que no se muestra hasta completar el registro. */
+export function useProfile(): UserProfile {
+  const { state } = useStore();
+  if (!state.profile) throw new Error("useProfile se usó antes de completar el registro.");
+  return state.profile;
+}
+
+/** Horario del día generado a partir de la hora de despertar, dormir, trabajo y entreno del perfil. */
+export function useSchedule(): ScheduleItem[] {
+  const p = useProfile();
+  return useMemo(
+    () => buildSchedule({ wake: p.wake, bed: p.bed, workStart: p.workStart, workEnd: p.workEnd, trainStart: p.trainStart, trainMinutes: p.trainMinutes }),
+    [p.wake, p.bed, p.workStart, p.workEnd, p.trainStart, p.trainMinutes],
+  );
 }

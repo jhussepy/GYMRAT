@@ -1,31 +1,33 @@
 "use client";
 
+import { useMemo } from "react";
 import { ChevronRight, Droplets, Minus, Plus } from "lucide-react";
-import { PROFILE, weekdayFromDate } from "@/lib/config";
-import { CATEGORY_COLOR, QUICK_TIPS, SCHEDULE, WORKOUTS, WORKOUT_FOCUS } from "@/lib/data";
-import { isTaperDay, mealsForDay, totals } from "@/lib/nutrition";
+import { weekdayFromDate } from "@/lib/config";
+import { CATEGORY_COLOR, QUICK_TIPS } from "@/lib/data";
+import { planFor } from "@/lib/plan";
+import { addMinutes } from "@/lib/profile";
 import { bioDayFraction, blockMinutes, caffeineAllowed, findBlock, formatDuration, isInBlock, minutesOf, pad2, todayISO } from "@/lib/time";
-import { useStore } from "@/lib/store";
+import { useProfile, useSchedule, useStore } from "@/lib/store";
 import { Card, ProgressBar, SectionTitle } from "./ui";
 import { DayDial } from "./DayDial";
 import { useNow } from "./useNow";
 
-const sleepMinutes = SCHEDULE.filter((b) => b.category === "Sueño").reduce((sum, b) => sum + blockMinutes(b), 0);
-const gymMinutes = SCHEDULE.filter((b) => b.category === "Gym").reduce((sum, b) => sum + blockMinutes(b), 0);
-
 export function ClockTab({ onNavigate }: { onNavigate: (tab: "rutina" | "menu") => void }) {
   const now = useNow();
   const { state, addWater } = useStore();
+  const profile = useProfile();
+  const schedule = useSchedule();
+  const sleepMinutes = useMemo(() => schedule.filter((b) => b.category === "Sueño").reduce((sum, b) => sum + blockMinutes(b), 0), [schedule]);
+  const gymMinutes = useMemo(() => schedule.filter((b) => b.category === "Gym").reduce((sum, b) => sum + blockMinutes(b), 0), [schedule]);
   const minute = now ? minutesOf(now) : null;
-  const current = minute !== null ? findBlock(SCHEDULE, minute) : undefined;
-  const allowed = minute !== null ? caffeineAllowed(minute) : null;
+  const current = minute !== null ? findBlock(schedule, minute) : undefined;
+  const allowed = minute !== null ? caffeineAllowed(minute, profile.wake, profile.caffeineCutoff) : null;
   const date = now ? todayISO(now) : "";
   const water = date ? (state.water[date] ?? 0) : 0;
   const left = current && minute !== null ? remainingInBlock(current.end, minute) : null;
 
-  const plan = now ? weekdayFromDate(now) : null;
+  const dayPlan = now ? planFor(profile.trainingDays, weekdayFromDate(now)) : null;
   const weekdayName = now ? now.toLocaleDateString("es", { weekday: "long" }) : "";
-  const dayTotals = plan && isTaperDay(plan) ? totals(mealsForDay(plan)) : null;
 
   return (
     <div className="space-y-6 lg:space-y-7">
@@ -33,16 +35,16 @@ export function ClockTab({ onNavigate }: { onNavigate: (tab: "rutina" | "menu") 
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-flame/80 to-transparent" aria-hidden />
         <p className="mb-2 flex items-center gap-2 rounded-full border border-line/80 bg-ink/25 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
           <span className="h-1.5 w-1.5 rounded-full bg-flame shadow-[0_0_10px_rgb(247_106_80_/_0.9)]" aria-hidden />
-          Tu sistema de entrenamiento
+          {profile.name ? `Hola, ${profile.name}` : "Tu sistema de entrenamiento"}
         </p>
         <p className="mt-3 text-sm capitalize tracking-[0.24em] text-muted">{weekdayName || "\u00A0"}</p>
-        <h2 className="mt-3 max-w-full break-words pl-[0.08em] text-5xl tracking-[0.12em] sm:text-7xl lg:text-8xl">{now ? (plan ? WORKOUT_FOCUS[plan] : "Preparación") : "GYMRAT"}</h2>
-        <p className="mt-4 pl-[0.2em] text-xs font-medium tracking-[0.18em] text-chalk/85 sm:text-sm sm:tracking-[0.28em]">{plan ? "SMART FIT · 19:00 A 21:00" : "PLANIFICACIÓN · NUTRICIÓN Y RECUPERACIÓN"}</p>
+        <h2 className="mt-3 max-w-full break-words pl-[0.08em] text-5xl tracking-[0.12em] sm:text-7xl lg:text-8xl">{now ? (dayPlan ? dayPlan.focus : "Descanso") : "GYMRAT"}</h2>
+        <p className="mt-4 pl-[0.2em] text-xs font-medium tracking-[0.18em] text-chalk/85 sm:text-sm sm:tracking-[0.28em]">{dayPlan ? `ENTRENAMIENTO · ${profile.trainStart} A ${addMinutes(profile.trainStart, profile.trainMinutes)}` : "DESCANSO · NUTRICIÓN Y RECUPERACIÓN"}</p>
         <button
-          onClick={() => onNavigate(plan ? "rutina" : "menu")}
+          onClick={() => onNavigate(dayPlan ? "rutina" : "menu")}
           className="mt-8 inline-flex min-h-12 items-center justify-center gap-3 rounded-xl bg-flame px-7 font-display text-sm uppercase tracking-[0.14em] text-ink shadow-lg shadow-black/10 transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 sm:px-8 sm:text-base"
         >
-          {plan ? "Ver rutina de hoy" : "Ver compras"}
+          {dayPlan ? "Ver rutina de hoy" : "Ver mi menú"}
           <ChevronRight size={18} aria-hidden />
         </button>
         <div className="pointer-events-none absolute -bottom-20 -right-12 h-52 w-52 rounded-full border border-flame/10 sm:h-72 sm:w-72" aria-hidden />
@@ -50,17 +52,19 @@ export function ClockTab({ onNavigate }: { onNavigate: (tab: "rutina" | "menu") 
       </section>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <SplitPanel className="panel-a" title="Rutina" detail={plan ? `${WORKOUTS[plan].length} ${plan === "Sábado" ? "bloques" : "ejercicios"} · ${WORKOUT_FOCUS[plan]}` : "Hoy descansas del gimnasio"} onClick={() => onNavigate("rutina")} />
-        <SplitPanel className="panel-b" title="Menú" detail={dayTotals ? `${dayTotals.kcal} kcal · ${dayTotals.protein} g de proteína` : "Tápers de lunes a viernes"} onClick={() => onNavigate("menu")} />
+        <SplitPanel className="panel-a" title="Rutina" detail={dayPlan ? `${dayPlan.exercises.length} ${dayPlan.routine === "Sábado" ? "bloques" : "ejercicios"} · ${dayPlan.focus}` : "Hoy descansas del gimnasio"} onClick={() => onNavigate("rutina")} />
+        <SplitPanel className="panel-b" title="Menú" detail={`Meta: ${profile.kcalTarget.toLocaleString("es")} kcal · ${profile.proteinTargetG} g de proteína`} onClick={() => onNavigate("menu")} />
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,380px)_1fr] lg:gap-6">
         <Card className="flex flex-col items-center justify-center">
           <DayDial
-            fraction={now ? bioDayFraction(now) : null}
+            schedule={schedule}
+            wake={profile.wake}
+            fraction={now ? bioDayFraction(now, profile.wake) : null}
             activeStart={current?.start}
             title={now ? `${pad2(now.getHours())}:${pad2(now.getMinutes())}:${pad2(now.getSeconds())}` : "--:--:--"}
-            subtitle={`Tu día empieza a las ${PROFILE.wake}`}
+            subtitle={`Tu día empieza a las ${profile.wake}`}
           />
           <ul className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-muted">
             {(Object.keys(CATEGORY_COLOR) as (keyof typeof CATEGORY_COLOR)[]).map((cat) => (
@@ -86,7 +90,7 @@ export function ClockTab({ onNavigate }: { onNavigate: (tab: "rutina" | "menu") 
               {left !== null && <span className="rounded-full border border-line px-3 py-1.5 text-muted">Quedan {formatDuration(left)}</span>}
               {allowed !== null && (
                 <span className={`rounded-full border px-3 py-1.5 ${allowed ? "border-flame/50 text-flame" : "border-rose/50 text-rose"}`}>
-                  {allowed ? `Cafeína permitida hasta las ${PROFILE.caffeineCutoff}` : `Cafeína cortada desde las ${PROFILE.caffeineCutoff}`}
+                  {allowed ? `Cafeína permitida hasta las ${profile.caffeineCutoff}` : `Cafeína cortada desde las ${profile.caffeineCutoff}`}
                 </span>
               )}
             </div>
@@ -97,10 +101,10 @@ export function ClockTab({ onNavigate }: { onNavigate: (tab: "rutina" | "menu") 
               <h2 className="flex items-center gap-2 font-display text-xl sm:text-2xl">
                 <Droplets size={20} className="text-sky" aria-hidden /> Agua de hoy
               </h2>
-              <span className="tabular-nums text-sm text-muted">{water.toLocaleString("es")} <span className="text-muted/70">/</span> {PROFILE.waterGoalMl.toLocaleString("es")} ml</span>
+              <span className="tabular-nums text-sm text-muted">{water.toLocaleString("es")} <span className="text-muted/70">/</span> {profile.waterGoalMl.toLocaleString("es")} ml</span>
             </div>
             <div className="mt-4">
-              <ProgressBar value={water} max={PROFILE.waterGoalMl} barClass="bg-sky" label="Agua bebida hoy" />
+              <ProgressBar value={water} max={profile.waterGoalMl} barClass="bg-sky" label="Agua bebida hoy" />
             </div>
             <div className="mt-4 grid grid-cols-[auto_1fr_1fr] gap-2">
               <button onClick={() => date && addWater(date, -250)} disabled={!date || water <= 0} aria-label="Quitar 250 ml" className="flex h-11 w-12 items-center justify-center rounded-xl border border-line text-muted transition-colors duration-200 hover:border-flame/50 hover:text-chalk disabled:opacity-40">
@@ -118,9 +122,9 @@ export function ClockTab({ onNavigate }: { onNavigate: (tab: "rutina" | "menu") 
       </div>
 
       <Card>
-        <SectionTitle title="Tu día, hora por hora" hint={`Sueño total: ${formatDuration(sleepMinutes)} (noche y siesta). Gimnasio: ${formatDuration(gymMinutes)}.`} />
+        <SectionTitle title="Tu día, hora por hora" hint={`Sueño planificado: ${formatDuration(sleepMinutes)}. Entrenamiento: ${formatDuration(gymMinutes)}.`} />
         <ol className="space-y-2.5">
-          {SCHEDULE.map((item) => {
+          {schedule.map((item) => {
             const active = minute !== null && isInBlock(item, minute);
             return (
               <li key={item.start} className={`flex flex-col gap-2 rounded-xl border p-3.5 transition-colors sm:flex-row sm:items-center sm:justify-between sm:gap-4 ${active ? "border-amber/70 bg-raised shadow-sm" : "border-line/70 bg-ink/15"}`} aria-current={active ? "time" : undefined}>

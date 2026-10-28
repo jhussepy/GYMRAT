@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { WORKOUTS, type Exercise } from "@/lib/data";
+import { WORKOUTS, WORKOUT_FOCUS, type Exercise } from "@/lib/data";
 import type { SetLog } from "@/lib/store";
 import { Card, SectionTitle } from "./ui";
 
@@ -30,11 +30,12 @@ interface WeekSummary {
   sets: number;
 }
 
-const EXERCISE_OPTIONS: ExerciseOption[] = Object.entries(WORKOUTS).flatMap(([day, exercises]) =>
+const EXERCISE_OPTIONS: ExerciseOption[] = Object.entries(WORKOUTS).flatMap(([routine, exercises]) =>
   exercises.map((exercise) => ({
     id: exercise.id,
     name: exercise.name,
-    day,
+    // Se etiqueta por tipo de rutina (Empuje, Tirón…), no por día: cada usuario entrena en días distintos.
+    day: WORKOUT_FOCUS[routine as keyof typeof WORKOUT_FOCUS] ?? routine,
     sets: exercise.sets,
     type: exercise.type,
   })),

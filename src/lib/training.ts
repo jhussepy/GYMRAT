@@ -1,5 +1,6 @@
-import { PROFILE, weekdayFromDate } from "./config";
+import { weekdayFromDate } from "./config";
 import { WORKOUTS, type Exercise } from "./data";
+import { DEFAULT_TRAINING_DAYS, planFor } from "./plan";
 import type { AppState, WeightEntry } from "./store";
 import { todayISO } from "./time";
 
@@ -32,9 +33,9 @@ export function addDays(date: string, n: number): string {
 
 const isSunday = (date: string) => parseISO(date).getDay() === 0;
 
-/** Peso más reciente hasta esa fecha (o tu peso inicial). */
-export function weightOn(date: string, weights: WeightEntry[]): number {
-  let w: number = PROFILE.startWeightKg;
+/** Peso más reciente hasta esa fecha (o tu peso inicial). Sin perfil se usa 70 kg como referencia. */
+export function weightOn(date: string, weights: WeightEntry[], startKg = 70): number {
+  let w = startKg;
   for (const e of weights) {
     if (e.date <= date) w = e.kg;
     else break;
@@ -60,7 +61,7 @@ export interface SessionStats {
 export function sessionStats(date: string, state: AppState): SessionStats {
   const log = state.workoutLogs[date] ?? {};
   const meta = state.sessions[date];
-  const weight = weightOn(date, state.weights);
+  const weight = weightOn(date, state.weights, state.profile?.startWeightKg);
 
   let setsDone = 0;
   let volumeKg = 0;
@@ -99,9 +100,9 @@ export function sessionStats(date: string, state: AppState): SessionStats {
     kcalEstimated = (STRENGTH_MET * weight * strengthMin) / 60 + cardioKcal;
   } else if (manual) {
     // Sin series registradas: se asume la sesión completa del plan de ese día.
-    const plan = weekdayFromDate(parseISO(date));
+    const plan = planFor(state.profile?.trainingDays ?? DEFAULT_TRAINING_DAYS, weekdayFromDate(parseISO(date)));
     if (plan) {
-      for (const ex of WORKOUTS[plan]) {
+      for (const ex of plan.exercises) {
         if (ex.type === "cardio") {
           const min = parseInt(ex.reps, 10) || 0;
           minutes += min;
@@ -112,7 +113,7 @@ export function sessionStats(date: string, state: AppState): SessionStats {
           kcalEstimated += (STRENGTH_MET * weight * min) / 60;
         }
       }
-      if (plan !== "Sábado") {
+      if (plan.routine !== "Sábado") {
         minutes += WARMUP_MIN;
         kcalEstimated += (STRENGTH_MET * weight * WARMUP_MIN) / 60;
       }

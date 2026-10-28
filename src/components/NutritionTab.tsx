@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
-import { PROFILE, WEEKDAYS, weekdayFromDate, type Weekday } from "@/lib/config";
+import { WEEKDAYS, weekdayFromDate, type Weekday } from "@/lib/config";
 import { TAPERS } from "@/lib/data";
 import { mealsForDay, totals, type WeekdayWithTaper } from "@/lib/nutrition";
 import { Card, DayPicker, ProgressBar, SectionTitle } from "./ui";
-import { useStore } from "@/lib/store";
+import { useProfile, useStore } from "@/lib/store";
 import { todayISO } from "@/lib/time";
 import { FOOD_CATALOG, nutritionForGrams } from "@/lib/food-catalog";
 
@@ -37,6 +37,7 @@ function formatNutritionDate(value: string): string {
 
 export function NutritionTab() {
   const { state, addNutritionEntry, removeNutritionEntry } = useStore();
+  const profile = useProfile();
   const [date, setDate] = useState(todayISO());
   const [foodName, setFoodName] = useState("");
   const [foodKcal, setFoodKcal] = useState("");
@@ -53,7 +54,7 @@ export function NutritionTab() {
 
   const meals = mealsForDay(day);
   const t = totals(meals);
-  const kcalGap = PROFILE.kcalTarget - t.kcal;
+  const kcalGap = profile.kcalTarget - t.kcal;
   const loggedFoods = state.nutritionEntries[date] ?? [];
   const selectedCatalogFood = FOOD_CATALOG.find((food) => food.id === catalogFoodId);
   const grams = Number(foodGrams);
@@ -80,15 +81,15 @@ export function NutritionTab() {
     const averageProtein = recordedDays.length
       ? Math.round((recordedDays.reduce((sum, dayRecord) => sum + dayRecord.protein, 0) / recordedDays.length) * 10) / 10
       : null;
-    const kcalMin = PROFILE.kcalTarget * 0.9;
-    const kcalMax = PROFILE.kcalTarget * 1.1;
+    const kcalMin = profile.kcalTarget * 0.9;
+    const kcalMax = profile.kcalTarget * 1.1;
     return {
       days,
       recordedCount: recordedDays.length,
       averageKcal,
       averageProtein,
       daysNearKcalTarget: recordedDays.filter((dayRecord) => dayRecord.kcal >= kcalMin && dayRecord.kcal <= kcalMax).length,
-      daysAtProteinTarget: recordedDays.filter((dayRecord) => dayRecord.protein >= PROFILE.proteinTargetG).length,
+      daysAtProteinTarget: recordedDays.filter((dayRecord) => dayRecord.protein >= profile.proteinTargetG).length,
     };
   }, [state.nutritionEntries]);
 
@@ -199,18 +200,18 @@ export function NutritionTab() {
           <div className="rounded-xl border border-line/70 bg-ink/20 p-4">
             <div className="mb-1 flex items-center justify-between text-sm">
               <span>Calorías consumidas</span>
-              <span className="tabular-nums">{consumed.kcal} / {PROFILE.kcalTarget} kcal</span>
+              <span className="tabular-nums">{consumed.kcal} / {profile.kcalTarget} kcal</span>
             </div>
-            <ProgressBar value={consumed.kcal} max={PROFILE.kcalTarget} barClass="bg-amber" label="Calorías consumidas" />
-            <p className="mt-2 text-xs text-muted">{consumed.kcal <= PROFILE.kcalTarget ? `Quedan ${PROFILE.kcalTarget - consumed.kcal} kcal respecto a la meta.` : `Superas la meta en ${consumed.kcal - PROFILE.kcalTarget} kcal.`}</p>
+            <ProgressBar value={consumed.kcal} max={profile.kcalTarget} barClass="bg-amber" label="Calorías consumidas" />
+            <p className="mt-2 text-xs text-muted">{consumed.kcal <= profile.kcalTarget ? `Quedan ${profile.kcalTarget - consumed.kcal} kcal respecto a la meta.` : `Superas la meta en ${consumed.kcal - profile.kcalTarget} kcal.`}</p>
           </div>
           <div className="rounded-xl border border-line/70 bg-ink/20 p-4">
             <div className="mb-1 flex items-center justify-between text-sm">
               <span>Proteína consumida</span>
-              <span className="tabular-nums">{Math.round(consumed.protein * 10) / 10} / {PROFILE.proteinTargetG} g</span>
+              <span className="tabular-nums">{Math.round(consumed.protein * 10) / 10} / {profile.proteinTargetG} g</span>
             </div>
-            <ProgressBar value={consumed.protein} max={PROFILE.proteinTargetG} barClass="bg-flame" label="Proteína consumida" />
-            <p className="mt-2 text-xs text-muted">{consumed.protein < PROFILE.proteinTargetG ? `Faltan ${Math.round((PROFILE.proteinTargetG - consumed.protein) * 10) / 10} g para la meta.` : "Meta de proteína alcanzada."}</p>
+            <ProgressBar value={consumed.protein} max={profile.proteinTargetG} barClass="bg-flame" label="Proteína consumida" />
+            <p className="mt-2 text-xs text-muted">{consumed.protein < profile.proteinTargetG ? `Faltan ${Math.round((profile.proteinTargetG - consumed.protein) * 10) / 10} g para la meta.` : "Meta de proteína alcanzada."}</p>
           </div>
         </div>
         <div className="mt-4">
@@ -247,24 +248,24 @@ export function NutritionTab() {
           <div className="rounded-xl border border-line/70 bg-ink/20 p-4">
             <p className="text-sm text-muted">Promedio de calorías</p>
             <p className="mt-1 font-display text-3xl tabular-nums">{weeklyNutrition.averageKcal === null ? "—" : weeklyNutrition.averageKcal.toLocaleString("es-ES")}<span className="text-base text-muted"> kcal</span></p>
-            <p className="mt-1 text-xs text-muted">Meta diaria: {PROFILE.kcalTarget.toLocaleString("es-ES")} kcal</p>
+            <p className="mt-1 text-xs text-muted">Meta diaria: {profile.kcalTarget.toLocaleString("es-ES")} kcal</p>
           </div>
           <div className="rounded-xl border border-line/70 bg-ink/20 p-4">
             <p className="text-sm text-muted">Promedio de proteína</p>
             <p className="mt-1 font-display text-3xl tabular-nums">{weeklyNutrition.averageProtein === null ? "—" : weeklyNutrition.averageProtein.toLocaleString("es-ES")}<span className="text-base text-muted"> g</span></p>
-            <p className="mt-1 text-xs text-muted">Meta diaria: {PROFILE.proteinTargetG} g</p>
+            <p className="mt-1 text-xs text-muted">Meta diaria: {profile.proteinTargetG} g</p>
           </div>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-line/70 p-4">
             <p className="text-sm text-muted">Días dentro de ±10 % de calorías</p>
             <p className="mt-1 text-xl font-semibold tabular-nums">{weeklyNutrition.recordedCount ? weeklyNutrition.daysNearKcalTarget : "—"}<span className="text-sm font-normal text-muted">{weeklyNutrition.recordedCount ? ` / ${weeklyNutrition.recordedCount} registrados` : " · sin datos"}</span></p>
-            <p className="mt-1 text-xs text-muted">Rango orientativo: {Math.round(PROFILE.kcalTarget * 0.9).toLocaleString("es-ES")}–{Math.round(PROFILE.kcalTarget * 1.1).toLocaleString("es-ES")} kcal.</p>
+            <p className="mt-1 text-xs text-muted">Rango orientativo: {Math.round(profile.kcalTarget * 0.9).toLocaleString("es-ES")}–{Math.round(profile.kcalTarget * 1.1).toLocaleString("es-ES")} kcal.</p>
           </div>
           <div className="rounded-xl border border-line/70 p-4">
             <p className="text-sm text-muted">Días que alcanzaron la meta de proteína</p>
             <p className="mt-1 text-xl font-semibold tabular-nums">{weeklyNutrition.recordedCount ? weeklyNutrition.daysAtProteinTarget : "—"}<span className="text-sm font-normal text-muted">{weeklyNutrition.recordedCount ? ` / ${weeklyNutrition.recordedCount} registrados` : " · sin datos"}</span></p>
-            <p className="mt-1 text-xs text-muted">Objetivo: al menos {PROFILE.proteinTargetG} g al día.</p>
+            <p className="mt-1 text-xs text-muted">Objetivo: al menos {profile.proteinTargetG} g al día.</p>
           </div>
         </div>
         <div className="mt-4 overflow-x-auto">
@@ -291,6 +292,10 @@ export function NutritionTab() {
         </div>
       </Card>
 
+      <details className="rounded-2xl border border-line/70 bg-panel p-5">
+        <summary className="cursor-pointer font-display text-xl uppercase tracking-wide marker:text-flame">Ejemplo de planificación semanal con tápers</summary>
+        <p className="mt-2 text-sm text-muted">Es un menú de muestra y no se ajusta a tus calorías. Úsalo como inspiración; tu seguimiento real está en «Consumo real del día».</p>
+        <div className="mt-5 space-y-6">
       <Card>
         <SectionTitle title="Menú del día" hint="Elige un día para ver sus comidas con calorías y proteína aproximadas." />
         <DayPicker days={TAPER_DAYS} value={day} onChange={setDay} />
@@ -300,19 +305,19 @@ export function NutritionTab() {
             <div className="mb-1.5 flex justify-between text-sm">
               <span>Calorías</span>
               <span className="tabular-nums text-muted">
-                {t.kcal} de {PROFILE.kcalTarget} kcal
+                {t.kcal} de {profile.kcalTarget} kcal
               </span>
             </div>
-            <ProgressBar value={t.kcal} max={PROFILE.kcalTarget} barClass="bg-amber" label="Calorías del día" />
+            <ProgressBar value={t.kcal} max={profile.kcalTarget} barClass="bg-amber" label="Calorías del día" />
           </div>
           <div>
             <div className="mb-1.5 flex justify-between text-sm">
               <span>Proteína</span>
               <span className="tabular-nums text-muted">
-                {t.protein} de {PROFILE.proteinTargetG} g
+                {t.protein} de {profile.proteinTargetG} g
               </span>
             </div>
-            <ProgressBar value={t.protein} max={PROFILE.proteinTargetG} barClass="bg-flame" label="Proteína del día" />
+            <ProgressBar value={t.protein} max={profile.proteinTargetG} barClass="bg-flame" label="Proteína del día" />
           </div>
         </div>
         <p className="mt-3 text-sm text-muted">
@@ -393,6 +398,8 @@ export function NutritionTab() {
           })}
         </div>
       </Card>
+        </div>
+      </details>
     </div>
   );
 }

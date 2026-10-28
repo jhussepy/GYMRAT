@@ -11,23 +11,6 @@ export interface ScheduleItem {
   description: string;
 }
 
-export const SCHEDULE: ScheduleItem[] = [
-  { start: "02:30", end: "02:45", activity: "Despertar y aseo", category: "Rutina", description: "Agua fría en la cara y vaso grande de agua con electrolitos." },
-  { start: "02:45", end: "03:30", activity: "Transporte al trabajo", category: "Traslado", description: "Audio ligero o silencio para despertar sin saturar la mente." },
-  { start: "03:30", end: "04:00", activity: "Pre-trabajo y activación", category: "Nutrición", description: "Café, proteína y revisión rápida de prioridades." },
-  { start: "04:00", end: "08:00", activity: "Trabajo (bloque 1)", category: "Trabajo", description: "Pico de energía matutino. Último café a las 08:00." },
-  { start: "08:00", end: "09:00", activity: "Pausa y comida principal", category: "Nutrición", description: "Táper del día: proteína + carbohidrato + verdura." },
-  { start: "09:00", end: "14:00", activity: "Trabajo (bloque 2)", category: "Trabajo", description: "Segundo tramo laboral. Hidratación constante (1.5 L)." },
-  { start: "14:00", end: "15:15", activity: "Regreso a casa", category: "Traslado", description: "Descompresión laboral; evita pantallas brillantes." },
-  { start: "15:15", end: "15:45", activity: "Comida pro-siesta", category: "Nutrición", description: "Proteína magra con carbohidrato y verduras al vapor." },
-  { start: "15:45", end: "17:20", activity: "Siesta de recuperación", category: "Sueño", description: "Habitación a oscuras y móvil en modo avión (90 min)." },
-  { start: "17:20", end: "19:00", activity: "Libre y pre-entreno", category: "Libre", description: "A las 18:20: plátano y un vaso grande de agua." },
-  { start: "19:00", end: "21:00", activity: "Smart Fit y estudio en tablet", category: "Gym", description: "Fuerza 75 min + cardio 30 min. Descansos de 90 s con la tablet." },
-  { start: "21:00", end: "21:30", activity: "Ducha y traslado", category: "Libre", description: "Regreso a casa." },
-  { start: "21:30", end: "22:00", activity: "Cena y preparación", category: "Nutrición", description: "Cena proteica ligera. Mochila lista para las 02:30." },
-  { start: "22:00", end: "02:30", activity: "Sueño nocturno", category: "Sueño", description: "Descanso nocturno continuo (4 h 30 min)." },
-];
-
 export const CATEGORY_COLOR: Record<Category, string> = {
   Rutina: "rgb(var(--c-rutina))",
   Traslado: "rgb(var(--c-traslado))",
@@ -166,14 +149,14 @@ export const SHOPPING: ShoppingItem[] = [
 
 /* ───────── Trading ───────── */
 export const TRADING_BLOCKS = [
-  { when: "Lun a Sáb · 19:00 a 21:00", title: "Estudio entre series (90 a 120 s)", text: "Repasa Order Blocks, FVG y BOS en la tablet durante los descansos, sin perder el ritmo del entrenamiento." },
-  { when: "Sábado · 18:00 a 20:00", title: "Backtesting y estadística", text: "Sesión de simulador y análisis cuantitativo de la semana." },
-  { when: "Domingo · 17:00 a 19:00", title: "Proyección y zonas clave", text: "Prepara el mercado del lunes: rangos operativos, zonas clave y noticias." },
+  { when: "Durante los descansos", title: "Estudio entre series (90 a 120 s)", text: "Repasa Order Blocks, FVG y BOS en la tablet durante los descansos, sin perder el ritmo del entrenamiento." },
+  { when: "Fin de semana", title: "Backtesting y estadística", text: "Sesión de simulador y análisis cuantitativo de la semana." },
+  { when: "Domingo", title: "Proyección y zonas clave", text: "Prepara el mercado del lunes: rangos operativos, zonas clave y noticias." },
 ];
 
 /* ───────── Consejos rápidos ───────── */
 export const QUICK_TIPS = [
   { q: "Máquina ocupada", a: "En hora punta usa la alternativa de cada ejercicio (mancuernas, poleas o máquina convergente) en vez de esperar." },
-  { q: "Hambre en el bloque 2", a: "Entre las 09:00 y las 14:00 toma 500 ml de agua o una infusión sin azúcar. El táper de las 08:00 te mantiene saciado." },
+  { q: "Hambre entre comidas", a: "Toma 500 ml de agua o una infusión sin azúcar y revisa si ya llegaste a tu meta de proteína del día." },
   { q: "Pedir un poké bowl", a: "Base de quinua o arroz con lechuga, doble proteína (salmón o pollo), palta moderada y sin salsas dulces." },
 ];

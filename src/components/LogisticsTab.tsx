@@ -11,7 +11,7 @@ export function LogisticsTab() {
 
   return (
     <Card>
-      <SectionTitle title="Domingo de preparación" hint="De 11:00 a 17:00: compras, cocina de los 5 tápers y huevos cocidos. Marca lo que ya compraste." />
+      <SectionTitle title="Lista de compras de ejemplo" hint="Acompaña al menú de ejemplo: compras y preparación de los tápers de la semana. Marca lo que ya compraste." />
       <div className="mb-4 flex items-center gap-3">
         <div className="flex-1">
           <ProgressBar value={done} max={SHOPPING.length} label="Compras marcadas" />

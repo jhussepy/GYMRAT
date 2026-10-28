@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Activity, AlertTriangle, CheckCircle2, Clock3, Cloud, CloudOff, Dumbbell, LoaderCircle, Scale, Timer, TrendingUp, Utensils, type LucideIcon } from "lucide-react";
-import { PROFILE } from "@/lib/config";
-import { StoreProvider, useStore } from "@/lib/store";
+import { StoreProvider, useProfile, useStore } from "@/lib/store";
 import { RestTimerProvider, useRestTimer } from "./RestTimer";
 import { ClockTab } from "./ClockTab";
 import { WorkoutTab } from "./WorkoutTab";
@@ -12,6 +11,7 @@ import { TradingTab } from "./TradingTab";
 import { LogisticsTab } from "./LogisticsTab";
 import { ProgressTab } from "./ProgressTab";
 import { ThemeToggle } from "./ThemeToggle";
+import { ProfileWizard } from "./ProfileWizard";
 import Link from "next/link";
 import { UserRound } from "lucide-react";
 
@@ -29,20 +29,39 @@ export function App({ userId }: { userId: string }) {
   return (
     <StoreProvider userId={userId}>
       <RestTimerProvider>
-        <Shell />
+        <Gate />
       </RestTimerProvider>
     </StoreProvider>
   );
+}
+
+/** Muestra el registro inicial hasta que el usuario completa su perfil: cada cuenta empieza desde cero. */
+function Gate() {
+  const { ready, state, saveProfile } = useStore();
+  if (!ready) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 text-muted" role="status">
+        <LoaderCircle size={28} className="animate-spin text-flame" aria-hidden />
+        <p className="text-sm">Cargando tu cuenta…</p>
+      </div>
+    );
+  }
+  if (!state.profile) return <ProfileWizard mode="new" onSave={saveProfile} />;
+  return <Shell />;
 }
 
 function Shell() {
   const [tab, setTab] = useState<TabId>("dia");
   const { showTimer } = useRestTimer();
   const { ready, cloudSyncStatus, cloudSyncMessage } = useStore();
+  const profile = useProfile();
+  // El módulo de trading es opcional: solo aparece si el usuario lo activa en su perfil.
+  const tabs = TABS.filter((t) => t.id !== "trading" || profile.modules.trading);
 
   useEffect(() => {
     const id = window.location.hash.slice(1);
-    if (TABS.some((t) => t.id === id)) setTab(id as TabId);
+    if (tabs.some((t) => t.id === id)) setTab(id as TabId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const go = (id: TabId) => {
@@ -69,13 +88,13 @@ function Shell() {
                 COACH PRO <span className="mx-1 text-flame">/</span> TU PROGRESO, ENFOCADO
               </p>
               <p className="mt-1 text-[11px] text-muted sm:hidden">
-                {PROFILE.kcalTarget.toLocaleString("es")} kcal · {PROFILE.proteinTargetG} g proteína
+                {profile.kcalTarget.toLocaleString("es")} kcal · {profile.proteinTargetG} g proteína
               </p>
             </div>
           </div>
 
           <nav className="hidden items-center gap-1 rounded-2xl border border-line/70 bg-ink/60 p-1 lg:flex" aria-label="Secciones">
-            {TABS.map((t) => {
+            {tabs.map((t) => {
               const Icon = t.icon;
               const active = tab === t.id;
               return (
@@ -94,8 +113,8 @@ function Shell() {
 
           <div className="flex items-center justify-self-end gap-3">
             <div className="hidden text-right xl:block">
-              <p className="text-xs font-semibold tabular-nums text-chalk">{PROFILE.kcalTarget.toLocaleString("es")} kcal</p>
-              <p className="text-[10px] text-muted">{PROFILE.proteinTargetG} g proteína objetivo</p>
+              <p className="text-xs font-semibold tabular-nums text-chalk">{profile.kcalTarget.toLocaleString("es")} kcal</p>
+              <p className="text-[10px] text-muted">{profile.proteinTargetG} g proteína objetivo</p>
             </div>
             <Link href="/cuenta" aria-label="Mi cuenta" title="Mi cuenta" className="flex h-10 w-10 items-center justify-center rounded-xl border border-line/70 text-muted transition hover:border-flame hover:text-flame">
               <UserRound size={18} aria-hidden />
@@ -139,7 +158,7 @@ function Shell() {
             <LogisticsTab />
           </div>
         )}
-        {tab === "trading" && <TradingTab />}
+        {tab === "trading" && profile.modules.trading && <TradingTab />}
         {tab === "progreso" && <ProgressTab />}
         <footer className="mt-10 hidden items-center justify-between border-t border-line/60 pt-5 text-xs text-muted sm:flex">
           <span className="flex items-center gap-2"><Activity size={14} className="text-flame" aria-hidden /> GYMRAT · COACH PRO</span>
@@ -159,8 +178,8 @@ function Shell() {
       )}
 
       <nav className="mobile-nav fixed inset-x-0 bottom-0 z-30 border-t border-line/70 bg-panel/95 backdrop-blur-xl lg:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }} aria-label="Secciones">
-        <ul className="mx-auto grid max-w-xl grid-cols-5 px-1">
-          {TABS.map((t) => {
+        <ul className="mx-auto grid max-w-xl px-1" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>
+          {tabs.map((t) => {
             const Icon = t.icon;
             const active = tab === t.id;
             return (

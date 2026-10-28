@@ -27,7 +27,9 @@ Para publicarlo, importa el repo en Vercel y configura las variables de entorno 
 
 | Quieres cambiar | Archivo |
 |---|---|
-| Peso, meta, calorías, proteína, agua, hora de cafeína | `src/lib/config.ts` |
+| Rutinas, ejercicios, menú de ejemplo | `src/lib/data.ts` |
+| Reglas de metas, horario y validaciones del perfil | `src/lib/profile.ts` |
+| Qué rutina toca según los días de entreno | `src/lib/plan.ts` |
 | Horario, rutinas, comidas, tápers, compras, trading | `src/lib/data.ts` |
 | Colores | `tailwind.config.ts` |
 
@@ -93,3 +95,24 @@ La clave secreta tiene un carácter que no es ASCII. Casi siempre es porque se c
 Si la sesión no se puede verificar, `/panel` muestra una pantalla de error (503) en vez de redirigir al login, para evitar un bucle de redirecciones. Los logs indican el problema exacto sin mostrar la clave.
 
 Mientras tanto, la portada pública sigue funcionando: el middleware solo corre en `/panel`, `/cuenta` y `/api`.
+
+## Registro de cada usuario
+
+Cada cuenta empieza vacía. Al iniciar sesión por primera vez, un asistente de 4 pasos pide lo que la app necesita saber:
+
+1. **Sobre ti:** sexo, año de nacimiento (solo adultos, 18 o más), altura y peso.
+2. **Tu objetivo:** perder grasa, mantener o ganar músculo, peso meta, actividad diaria y días de entreno (2 a 6).
+3. **Tu día:** hora de despertar y dormir, horario de trabajo o estudio, hora y duración del entrenamiento, y límite de cafeína.
+4. **Tus metas:** calorías, proteína y agua calculadas automáticamente (Mifflin-St Jeor), editables, y el módulo opcional de trading.
+
+Con eso se genera el reloj del día, la rutina de la semana y las metas. El perfil se guarda con el resto de los datos del usuario (en su navegador y en su fila de Supabase) y se puede editar desde **Progreso → Editar perfil**.
+
+Reglas de seguridad: no se calculan metas para menores de 18 años, no se ofrece déficit de calorías con un IMC bajo (menos de 21) ni metas de peso con IMC menor de 20, y las calorías nunca bajan de 1,200 (mujeres) o 1,500 (hombres).
+
+## Pruebas
+
+```bash
+npm test
+```
+
+Simulan usuarios nuevos y recurrentes en un navegador de prueba: registro completo, validaciones, aislamiento entre cuentas, sincronización con la nube y edición del perfil.

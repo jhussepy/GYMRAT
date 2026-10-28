@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Activity, Trash2 } from "lucide-react";
-import { BODY_BASELINE } from "@/lib/config";
-import { useStore, type BodyMeasurementEntry } from "@/lib/store";
+import { useProfile, useStore, type BodyMeasurementEntry } from "@/lib/store";
 import { todayISO } from "@/lib/time";
 import { Card, SectionTitle } from "./ui";
 
@@ -22,6 +21,7 @@ function formatDelta(value: number | undefined, baseline: number): string {
 
 export function BodyMetricsTab() {
   const { state, saveBodyMeasurement, removeBodyMeasurement } = useStore();
+  const profile = useProfile();
   const [date, setDate] = useState(todayISO());
   const [weight, setWeight] = useState("");
   const [waist, setWaist] = useState("");
@@ -31,6 +31,9 @@ export function BodyMetricsTab() {
   const [message, setMessage] = useState("");
 
   const entries = state.bodyMeasurements;
+  // Línea base: tu primera medición registrada; si no hay, el peso con el que empezaste.
+  const first = entries.length ? entries[0] : undefined;
+  const baselineWeight = first?.weightKg ?? profile.startWeightKg;
   const latest = entries.length ? entries[entries.length - 1] : undefined;
   const previous = entries.length > 1 ? entries[entries.length - 2] : undefined;
   const sorted = useMemo(() => [...entries].reverse(), [entries]);
@@ -83,11 +86,11 @@ export function BodyMetricsTab() {
       <Card>
         <SectionTitle title="Historial de composición corporal" hint="Registra mediciones nuevas tomadas en condiciones parecidas. Los campos que no tengas pueden quedar vacíos." />
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Metric label="Peso inicial" value={`${BODY_BASELINE.weightKg.toFixed(1)} kg`} />
-          <Metric label="Grasa inicial estimada" value={`${BODY_BASELINE.bodyFatPercent.toFixed(1)} %`} />
-          <Metric label="Músculo esquelético inicial" value={`≈${BODY_BASELINE.skeletalMuscleKg} kg`} />
+          <Metric label="Peso inicial" value={`${baselineWeight.toFixed(1)} kg`} />
+          <Metric label="Grasa inicial estimada" value={first?.bodyFatPercent !== undefined ? `${first.bodyFatPercent.toFixed(1)} %` : "Sin dato"} />
+          <Metric label="Músculo esquelético inicial" value={first?.skeletalMuscleKg !== undefined ? `${first.skeletalMuscleKg.toFixed(1)} kg` : "Sin dato"} />
         </div>
-        <p className="mt-3 text-xs leading-5 text-muted">La línea base es tu bioimpedancia del 22/10/2026. Los valores de composición son estimaciones del equipo, no diagnósticos.</p>
+        <p className="mt-3 text-xs leading-5 text-muted">La línea base es tu primera medición registrada. Si aún no tienes ninguna, se usa el peso con el que empezaste. Los valores de composición son estimaciones del equipo, no diagnósticos.</p>
       </Card>
 
       <Card>
@@ -97,7 +100,7 @@ export function BodyMetricsTab() {
             <input type="date" value={date} max={todayISO()} onChange={(e) => setDate(e.target.value)} className="mt-1 block min-h-11 w-full rounded-xl border border-line bg-ink px-3 py-2 text-chalk tabular-nums" />
           </Field>
           <Field label="Peso (kg) *">
-            <input type="number" min="30" max="300" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="97.7" className="field-input" />
+            <input type="number" min="30" max="300" step="0.1" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="70.0" className="field-input" />
           </Field>
           <Field label="Cintura (cm)">
             <input type="number" min="30" max="250" step="0.1" value={waist} onChange={(e) => setWaist(e.target.value)} placeholder="Pendiente" className="field-input" />
@@ -119,10 +122,10 @@ export function BodyMetricsTab() {
       <Card>
         <SectionTitle title="Última medición frente a la línea base" hint="Las diferencias aparecen solo cuando existe un dato comparable." />
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Metric label="Peso" value={latest ? `${latest.weightKg.toFixed(1)} kg` : "Sin registro"} detail={latest ? `${formatDelta(latest.weightKg - BODY_BASELINE.weightKg, 0)} kg frente al inicio` : "Registra tu primera medición"} />
+          <Metric label="Peso" value={latest ? `${latest.weightKg.toFixed(1)} kg` : "Sin registro"} detail={latest ? `${formatDelta(latest.weightKg - baselineWeight, 0)} kg frente al inicio` : "Registra tu primera medición"} />
           <Metric label="Cintura" value={latest?.waistCm !== undefined ? `${latest.waistCm.toFixed(1)} cm` : "Sin registro"} detail={latest?.waistCm !== undefined ? "Compara con futuras mediciones" : "Pendiente de medir"} />
-          <Metric label="Grasa corporal" value={latest?.bodyFatPercent !== undefined ? `${latest.bodyFatPercent.toFixed(1)} %` : "Sin registro"} detail={latest?.bodyFatPercent !== undefined ? `${formatDelta(latest.bodyFatPercent, BODY_BASELINE.bodyFatPercent)} puntos porcentuales vs. inicio` : "Solo con medición disponible"} />
-          <Metric label="Músculo esquelético" value={latest?.skeletalMuscleKg !== undefined ? `${latest.skeletalMuscleKg.toFixed(1)} kg` : "Sin registro"} detail={latest?.skeletalMuscleKg !== undefined ? `${formatDelta(latest.skeletalMuscleKg, BODY_BASELINE.skeletalMuscleKg)} kg vs. inicio` : "Solo con medición disponible"} />
+          <Metric label="Grasa corporal" value={latest?.bodyFatPercent !== undefined ? `${latest.bodyFatPercent.toFixed(1)} %` : "Sin registro"} detail={latest?.bodyFatPercent !== undefined ? `${formatDelta(latest.bodyFatPercent, first?.bodyFatPercent ?? latest.bodyFatPercent)} puntos porcentuales vs. inicio` : "Solo con medición disponible"} />
+          <Metric label="Músculo esquelético" value={latest?.skeletalMuscleKg !== undefined ? `${latest.skeletalMuscleKg.toFixed(1)} kg` : "Sin registro"} detail={latest?.skeletalMuscleKg !== undefined ? `${formatDelta(latest.skeletalMuscleKg, first?.skeletalMuscleKg ?? latest.skeletalMuscleKg)} kg vs. inicio` : "Solo con medición disponible"} />
         </div>
         {previous && latest && (
           <p className="mt-3 text-sm text-muted">Entre las dos últimas fechas registradas: peso {formatDelta(latest.weightKg - previous.weightKg, 0)} kg.</p>

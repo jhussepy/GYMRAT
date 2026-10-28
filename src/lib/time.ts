@@ -1,4 +1,3 @@
-import { PROFILE } from "./config";
 import type { ScheduleItem } from "./data";
 
 export const DAY_MIN = 1440;
@@ -35,15 +34,16 @@ export function formatDuration(min: number): string {
   return m === 0 ? `${h} h` : `${h} h ${m} min`;
 }
 
-/** Cafeína permitida desde que despiertas hasta la hora de corte. */
-export function caffeineAllowed(minute: number): boolean {
-  return minute >= toMin(PROFILE.wake) && minute < toMin(PROFILE.caffeineCutoff);
+/** Cafeína permitida desde que despiertas hasta tu hora límite. */
+export function caffeineAllowed(minute: number, wake: string, cutoff: string): boolean {
+  const off = (t: number) => (t - toMin(wake) + DAY_MIN) % DAY_MIN;
+  return off(minute) < off(toMin(cutoff));
 }
 
 /** Fracción (0–1) del "día biológico", que empieza al despertar. */
-export function bioDayFraction(d: Date): number {
+export function bioDayFraction(d: Date, wakeTime: string): number {
   const secs = d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();
-  const wake = toMin(PROFILE.wake) * 60;
+  const wake = toMin(wakeTime) * 60;
   return ((secs - wake + 86400) % 86400) / 86400;
 }
 

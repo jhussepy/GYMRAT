@@ -194,3 +194,10 @@ textarea {
     scroll-behavior: auto !important;
   }
 }
+
+@layer components {
+  /* Campo de formulario común (mediciones, registro de perfil). */
+  .field-input {
+    @apply mt-1 block min-h-11 w-full rounded-xl border border-line bg-ink px-3 py-2 text-chalk tabular-nums placeholder:text-muted/70 focus:border-flame;
+  }
+}

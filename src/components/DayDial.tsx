@@ -1,5 +1,4 @@
-import { CATEGORY_COLOR, SCHEDULE, type ScheduleItem } from "@/lib/data";
-import { PROFILE } from "@/lib/config";
+import { CATEGORY_COLOR, type ScheduleItem } from "@/lib/data";
 import { DAY_MIN, blockMinutes, toMin } from "@/lib/time";
 
 const SIZE = 320;
@@ -19,9 +18,12 @@ function arc(startDeg: number, endDeg: number) {
   return `M ${a.x.toFixed(2)} ${a.y.toFixed(2)} A ${R} ${R} 0 ${large} 1 ${b.x.toFixed(2)} ${b.y.toFixed(2)}`;
 }
 
-const startDeg = (item: ScheduleItem) => (((toMin(item.start) - toMin(PROFILE.wake) + DAY_MIN) % DAY_MIN) / DAY_MIN) * 360;
+const startDeg = (item: ScheduleItem, wake: string) => (((toMin(item.start) - toMin(wake) + DAY_MIN) % DAY_MIN) / DAY_MIN) * 360;
 
 interface Props {
+  schedule: ScheduleItem[];
+  /** Hora de despertar (HH:MM): el reloj empieza ahí. */
+  wake: string;
   /** Fracción 0–1 del día biológico (null mientras carga en el cliente). */
   fraction: number | null;
   activeStart?: string;
@@ -30,13 +32,13 @@ interface Props {
 }
 
 /** Reloj de 24 h que empieza al despertar: cada tramo del color de su categoría. */
-export function DayDial({ fraction, activeStart, title, subtitle }: Props) {
+export function DayDial({ schedule, wake, fraction, activeStart, title, subtitle }: Props) {
   const marker = fraction === null ? null : fraction * 360;
   return (
     <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="mx-auto w-full max-w-[340px]" role="img" aria-label="Reloj de 24 horas con los bloques de tu día">
       <circle cx={CX} cy={CX} r={R} fill="none" className="stroke-panel" strokeWidth={STROKE + 8} />
-      {SCHEDULE.map((item) => {
-        const s = startDeg(item);
+      {schedule.map((item) => {
+        const s = startDeg(item, wake);
         const len = (blockMinutes(item) / DAY_MIN) * 360;
         const active = item.start === activeStart;
         return (

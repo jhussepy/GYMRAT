@@ -61,7 +61,7 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "El estado de GYMRAT no es válido." }, { status: 400 });
   }
   const state = body.state as Record<string, unknown>;
-  if (![5, 6, 7, 8].includes(state.version as number)) {
+  if (![5, 6, 7, 8, 9].includes(state.version as number)) {
     return NextResponse.json({ error: "La versión de los datos no es compatible." }, { status: 400 });
   }
   try {

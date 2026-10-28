@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Timer } from "lucide-react";
 import { WEEKDAYS, weekdayFromDate, type Weekday } from "@/lib/config";
-import { WORKOUTS, WORKOUT_FOCUS, type Exercise } from "@/lib/data";
-import { useStore, type SetLog } from "@/lib/store";
+import type { Exercise } from "@/lib/data";
+import { trainingPlan } from "@/lib/plan";
+import { addMinutes } from "@/lib/profile";
+import { useProfile, useStore, type SetLog } from "@/lib/store";
 import { todayISO } from "@/lib/time";
 import { Card, DayPicker, ProgressBar } from "./ui";
 import { useRestTimer } from "./RestTimer";
@@ -54,17 +56,29 @@ function progressionGuidance(ex: Exercise, previous: SetLog[] | undefined): stri
 export function WorkoutTab() {
   const { state, setSetLog } = useStore();
   const { startRest } = useRestTimer();
-  const [day, setDay] = useState<Weekday>("Lunes");
+  const profile = useProfile();
+  const plans = useMemo(() => trainingPlan(profile.trainingDays), [profile.trainingDays]);
+  const [day, setDay] = useState<Weekday>(plans[0].day);
   const [today, setToday] = useState("");
 
   useEffect(() => {
     const d = new Date();
     setToday(todayISO(d));
     const w = weekdayFromDate(d);
-    if (w) setDay(w);
+    const days = plans.map((p) => p.day);
+    if (w && days.includes(w)) setDay(w);
+    else {
+      // Hoy no entrenas: se muestra tu próxima rutina.
+      const from = w ? WEEKDAYS.indexOf(w) : WEEKDAYS.length;
+      setDay(days.find((x) => WEEKDAYS.indexOf(x) > from) ?? days[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const exercises = WORKOUTS[day];
+  const plan = plans.find((p) => p.day === day) ?? plans[0];
+  const exercises = plan.exercises;
+  const planDays = plans.map((p) => p.day);
+  const planLabels = Object.fromEntries(plans.map((p) => [p.day, p.focus])) as Partial<Record<Weekday, string>>;
   const todayLog = state.workoutLogs[today] ?? {};
 
   /** Última sesión previa con datos para ese ejercicio. */
@@ -87,18 +101,18 @@ export function WorkoutTab() {
       <Card>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="font-display text-xl">Smart Fit · {day}</h2>
-            <p className="text-sm text-muted">{WORKOUT_FOCUS[day]} · 19:00 a 21:00</p>
+            <h2 className="font-display text-xl">Entrenamiento · {plan.day}</h2>
+            <p className="text-sm text-muted">{plan.focus} · {profile.trainStart} a {addMinutes(profile.trainStart, profile.trainMinutes)}</p>
           </div>
           <div className="w-full max-w-[220px] text-right text-sm text-muted">
             <p className="mb-1.5 tabular-nums">
-              {doneSets} de {totalSets} {day === "Sábado" ? "bloques" : "series"} hechas
+              {doneSets} de {totalSets} {plan.routine === "Sábado" ? "bloques" : "series"} hechas
             </p>
             <ProgressBar value={doneSets} max={totalSets} label="Progreso de la sesión" />
           </div>
         </div>
-        <DayPicker days={WEEKDAYS} value={day} onChange={setDay} labels={WORKOUT_FOCUS} />
-        {day !== "Sábado" && (
+        <DayPicker days={planDays} value={plan.day} onChange={setDay} labels={planLabels} />
+        {plan.routine !== "Sábado" && (
           <p className="mt-4 rounded-xl bg-raised p-3 text-sm text-muted">
             Antes de empezar, 5 a 8 min de calentamiento y una serie ligera del primer ejercicio. Termina cada serie con 1 o 2 repeticiones en reserva. Si ya superaste el rango de repeticiones con buena técnica, sube el peso la próxima vez.
           </p>
