@@ -4,9 +4,22 @@ import "@fontsource-variable/oswald";
 import "@fontsource-variable/inter";
 import "./globals.css";
 
+const siteUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000";
+const description = "GYMRAT reúne tus entrenamientos, medidas corporales, nutrición y hábitos para ayudarte a seguir tu progreso.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "GYMRAT · Entrena, registra y evoluciona",
-  description: "GYMRAT reúne tus entrenamientos, medidas corporales, nutrición y hábitos para ayudarte a seguir tu progreso.",
+  description,
+  openGraph: {
+    type: "website",
+    locale: "es_ES",
+    siteName: "GYMRAT",
+    title: "GYMRAT · La fuerza viene de Dios",
+    description,
+    images: [{ url: "/images/gymrat-og.jpg", width: 1200, height: 630, alt: "GYMRAT: la fuerza viene de Dios" }],
+  },
+  twitter: { card: "summary_large_image", title: "GYMRAT · La fuerza viene de Dios", description, images: ["/images/gymrat-og.jpg"] },
 };
 
 export const viewport: Viewport = {
