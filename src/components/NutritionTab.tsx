@@ -268,7 +268,7 @@ export function NutritionTab() {
             <p className="mt-1 text-xs text-muted">Objetivo: al menos {profile.proteinTargetG} g al día.</p>
           </div>
         </div>
-        <div className="mt-4 overflow-x-auto">
+        <div className="mt-4 overflow-x-auto" tabIndex={0} role="region" aria-label="Tabla de consumo del día">
           <table className="w-full min-w-[520px] text-left text-sm">
             <thead className="text-muted">
               <tr>
@@ -350,7 +350,7 @@ export function NutritionTab() {
 
       <Card>
         <SectionTitle title="Resumen de la semana" />
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Resumen de la semana">
           <table className="w-full min-w-[420px] text-left text-sm">
             <thead className="text-muted">
               <tr>

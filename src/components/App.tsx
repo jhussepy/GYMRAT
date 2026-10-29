@@ -56,6 +56,7 @@ function Shell() {
   const { ready, cloudSyncStatus, cloudSyncMessage } = useStore();
   const profile = useProfile();
   // El módulo de trading es opcional: solo aparece si el usuario lo activa en su perfil.
+  const warn = cloudSyncStatus === "error" || cloudSyncStatus === "local-only";
   const tabs = TABS.filter((t) => t.id !== "trading" || profile.modules.trading);
 
   useEffect(() => {
@@ -116,7 +117,10 @@ function Shell() {
               <p className="text-xs font-semibold tabular-nums text-chalk">{profile.kcalTarget.toLocaleString("es")} kcal</p>
               <p className="text-[10px] text-muted">{profile.proteinTargetG} g proteína objetivo</p>
             </div>
-            <Link href="/cuenta" aria-label="Mi cuenta" title="Mi cuenta" className="flex h-10 w-10 items-center justify-center rounded-xl border border-line/70 text-muted transition hover:border-flame hover:text-flame">
+            <button type="button" onClick={showTimer} aria-label="Abrir cronómetro de descanso" title="Cronómetro de descanso" className="flex h-11 w-11 items-center justify-center rounded-xl border border-line/70 text-muted transition hover:border-flame hover:text-flame">
+              <Timer size={18} aria-hidden />
+            </button>
+            <Link href="/cuenta" aria-label="Mi cuenta" title="Mi cuenta" className="flex h-11 w-11 items-center justify-center rounded-xl border border-line/70 text-muted transition hover:border-flame hover:text-flame">
               <UserRound size={18} aria-hidden />
             </Link>
             <ThemeToggle />
@@ -125,26 +129,39 @@ function Shell() {
       </header>
 
       {ready && (
-        <div className={`flex items-start gap-3 border-b px-4 py-3 text-sm sm:px-6 lg:px-8 ${
-          cloudSyncStatus === "error" || cloudSyncStatus === "local-only"
-            ? "border-amber-500/30 bg-amber-500/10 text-amber-200"
-            : cloudSyncStatus === "synced"
-              ? "border-emerald-500/20 bg-emerald-500/5 text-emerald-200"
-              : "border-line/70 bg-raised/40 text-muted"
-        }`} role={cloudSyncStatus === "error" || cloudSyncStatus === "local-only" ? "alert" : "status"} aria-live="polite">
-          {cloudSyncStatus === "loading" && <LoaderCircle size={18} className="mt-0.5 shrink-0 animate-spin" aria-hidden />}
-          {cloudSyncStatus === "local-only" && <CloudOff size={18} className="mt-0.5 shrink-0" aria-hidden />}
-          {cloudSyncStatus === "saving" && <Cloud size={18} className="mt-0.5 shrink-0 animate-pulse" aria-hidden />}
-          {cloudSyncStatus === "synced" && <CheckCircle2 size={18} className="mt-0.5 shrink-0" aria-hidden />}
-          {cloudSyncStatus === "error" && <AlertTriangle size={18} className="mt-0.5 shrink-0" aria-hidden />}
+        <div
+          className={`flex items-start gap-3 border-b px-4 py-3 text-sm sm:px-6 lg:px-8 ${
+            warn ? "border-amber/40 bg-amber/10" : cloudSyncStatus === "synced" ? "border-ok/30 bg-ok/10" : "border-line/70 bg-raised/40"
+          }`}
+          role={warn ? "alert" : "status"}
+          aria-live="polite"
+        >
+          {cloudSyncStatus === "loading" && <LoaderCircle size={18} className="mt-0.5 shrink-0 animate-spin text-muted" aria-hidden />}
+          {cloudSyncStatus === "local-only" && <CloudOff size={18} className="mt-0.5 shrink-0 text-amber" aria-hidden />}
+          {cloudSyncStatus === "saving" && <Cloud size={18} className="mt-0.5 shrink-0 animate-pulse text-muted" aria-hidden />}
+          {cloudSyncStatus === "synced" && <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-ok" aria-hidden />}
+          {cloudSyncStatus === "error" && <AlertTriangle size={18} className="mt-0.5 shrink-0 text-amber" aria-hidden />}
           <div className="min-w-0">
-            <p className="font-semibold">
+            <p className="font-semibold text-chalk">
+              {cloudSyncStatus === "loading" && "Conectando con tu cuenta…"}
               {cloudSyncStatus === "local-only" && "Guardado solo en este dispositivo"}
               {cloudSyncStatus === "saving" && "Sincronizando cambios…"}
               {cloudSyncStatus === "synced" && "Datos sincronizados con la nube"}
               {cloudSyncStatus === "error" && "No se pudo sincronizar"}
             </p>
-            {cloudSyncMessage && <p className="mt-1 break-words text-xs leading-5 opacity-90">{cloudSyncMessage} Exporta una copia JSON si necesitas proteger tus datos mientras se resuelve.</p>}
+            {warn && (
+              <>
+                <p className="mt-1 text-xs leading-5 text-muted">
+                  No pudimos conectar con tu cuenta en la nube. Tus datos están a salvo en este dispositivo y se sincronizarán cuando se restablezca la conexión. Mientras tanto, puedes descargar una copia en Progreso → Copia de seguridad.
+                </p>
+                {cloudSyncMessage && (
+                  <details className="mt-1 text-xs text-muted">
+                    <summary className="inline-flex min-h-8 cursor-pointer items-center underline-offset-2 hover:underline">Detalle técnico</summary>
+                    <p className="mt-1 break-words leading-5">{cloudSyncMessage}</p>
+                  </details>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
@@ -165,17 +182,6 @@ function Shell() {
           <span>La constancia se construye sesión a sesión.</span>
         </footer>
       </main>
-
-      {tab !== "rutina" && (
-        <button
-          onClick={showTimer}
-          aria-label="Abrir cronómetro de descanso"
-          className="timer-fab fixed right-4 z-40 flex h-14 w-14 items-center justify-center rounded-2xl bg-flame text-ink shadow-xl transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 lg:bottom-6 lg:right-6"
-          style={{ bottom: "calc(4.75rem + env(safe-area-inset-bottom))" }}
-        >
-          <Timer size={25} aria-hidden />
-        </button>
-      )}
 
       <nav className="mobile-nav fixed inset-x-0 bottom-0 z-30 border-t border-line/70 bg-panel/95 backdrop-blur-xl lg:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }} aria-label="Secciones">
         <ul className="mx-auto grid max-w-xl px-1" style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}>

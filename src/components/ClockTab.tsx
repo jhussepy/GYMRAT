@@ -35,7 +35,7 @@ export function ClockTab({ onNavigate }: { onNavigate: (tab: "rutina" | "menu") 
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-flame/80 to-transparent" aria-hidden />
         <p className="mb-2 flex items-center gap-2 rounded-full border border-line/80 bg-ink/25 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted">
           <span className="h-1.5 w-1.5 rounded-full bg-flame shadow-[0_0_10px_rgb(247_106_80_/_0.9)]" aria-hidden />
-          {profile.name ? `Hola, ${profile.name}` : "Tu sistema de entrenamiento"}
+          {profile.name ? `Hola, ${profile.name}` : <>Tu sistema<span className="hidden sm:inline"> de entrenamiento</span></>}
         </p>
         <p className="mt-3 text-sm capitalize tracking-[0.24em] text-muted">{weekdayName || "\u00A0"}</p>
         <h2 className="mt-3 max-w-full break-words pl-[0.08em] text-5xl tracking-[0.12em] sm:text-7xl lg:text-8xl">{now ? (dayPlan ? dayPlan.focus : "Descanso") : "GYMRAT"}</h2>
@@ -89,7 +89,7 @@ export function ClockTab({ onNavigate }: { onNavigate: (tab: "rutina" | "menu") 
               )}
               {left !== null && <span className="rounded-full border border-line px-3 py-1.5 text-muted">Quedan {formatDuration(left)}</span>}
               {allowed !== null && (
-                <span className={`rounded-full border px-3 py-1.5 ${allowed ? "border-flame/50 text-flame" : "border-rose/50 text-rose"}`}>
+                <span className={`rounded-full border px-3 py-1.5 ${allowed ? "border-ok/50 text-ok" : "border-rose/50 text-rose"}`}>
                   {allowed ? `Cafeína permitida hasta las ${profile.caffeineCutoff}` : `Cafeína cortada desde las ${profile.caffeineCutoff}`}
                 </span>
               )}

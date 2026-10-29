@@ -17,6 +17,7 @@ const config: Config = {
         flame: token("flame"),
         amber: token("amber"),
         rose: token("rose"),
+        ok: token("ok"),
         sky: token("sky"),
         dusk: token("dusk"),
         steel: token("steel"),

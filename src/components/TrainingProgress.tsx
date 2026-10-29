@@ -202,7 +202,7 @@ export function TrainingProgress({ logs, today }: {
             Aún no hay entrenamientos registrados. Guarda peso y repeticiones, o los minutos de cardio, para ver tu tendencia semanal.
           </p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Tendencia semanal de entrenamiento">
             <table className="w-full min-w-[540px] text-left text-sm">
               <thead className="text-muted">
                 <tr>
@@ -288,7 +288,7 @@ export function TrainingProgress({ logs, today }: {
               </p>
             )}
 
-            <div className="mt-4 overflow-x-auto">
+            <div className="mt-4 overflow-x-auto" tabIndex={0} role="region" aria-label="Historial del ejercicio">
               <table className="w-full min-w-[500px] text-left text-sm">
                 <thead className="text-muted">
                   <tr>

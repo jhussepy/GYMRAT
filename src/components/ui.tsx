@@ -33,17 +33,16 @@ export function ProgressBar({ value, max, barClass = "bg-flame", label }: { valu
 
 export function DayPicker<T extends string>({ days, value, onChange, labels }: { days: readonly T[]; value: T; onChange: (d: T) => void; labels?: Partial<Record<T, string>> }) {
   return (
-    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1.5" role="tablist">
+    <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1.5" role="group" aria-label="Elige el día">
       {days.map((d) => (
         <button
           key={d}
-          role="tab"
-          aria-selected={d === value}
+          aria-pressed={d === value}
           onClick={() => onChange(d)}
           className={`min-h-11 shrink-0 rounded-xl border px-4 font-display text-sm uppercase tracking-wider transition-all duration-200 ${d === value ? "border-flame bg-flame text-ink shadow-sm" : "border-line/80 bg-ink/30 text-muted hover:border-flame/60 hover:text-chalk"}`}
         >
           {d}
-          {labels?.[d] && <span className={`ml-2 text-xs normal-case tracking-normal ${d === value ? "text-ink/80" : "text-muted"}`}>{labels[d]}</span>}
+          {labels?.[d] && <span className={`ml-2 text-xs normal-case tracking-normal transition-colors duration-200 ${d === value ? "text-ink" : "text-muted"}`}>{labels[d]}</span>}
         </button>
       ))}
     </div>
