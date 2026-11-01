@@ -52,6 +52,10 @@ Para desarrollo local, utiliza un archivo .env.local ignorado por Git. Después 
 - [ ] Inicia sesión con un usuario B y comprueba que no recibe los datos del usuario A.
 - [ ] Si alguna comprobación falla, exporta una copia JSON antes de seguir probando y no borres los datos locales.
 
+## Sincronización entre dispositivos
+
+No necesitas ninguna migración nueva: el guardado condicional usa la columna `updated_at` que ya existe. Si guardas desde dos dispositivos a la vez, la app fusiona los cambios en lugar de sobrescribir (ver el README).
+
 ## Solución de problemas: "Guardado solo en este dispositivo"
 
 El aviso muestra el motivo exacto que devuelve el servidor. Los más habituales:

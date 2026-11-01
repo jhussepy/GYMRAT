@@ -1,9 +1,11 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { STORAGE_KEY } from "./config";
 import type { ScheduleItem } from "./data";
 import { buildSchedule, sanitizeProfile, type UserProfile } from "./profile";
+import { EMPTY_META, isDirty, pullState, pushState, reconcileOnLoad, type Codec, type SyncMeta, type Transport } from "./sync-engine";
+import { deepEqual, mergeStates } from "./sync-merge";
 
 export interface SetLog {
   kg: string;
@@ -177,6 +179,74 @@ interface StoreValue {
 
 const StoreContext = createContext<StoreValue | null>(null);
 
+const codec: Codec<AppState> = { sanitize, empty: emptyState };
+const SYNC_SUFFIX = ":sync";
+
+function readLocalState(key: string): AppState {
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? sanitize(JSON.parse(raw)) : emptyState();
+  } catch {
+    // Una copia local dañada se ignora sin afectar a otros usuarios.
+    return emptyState();
+  }
+}
+
+function readSyncMeta(key: string): SyncMeta | null {
+  try {
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(key + SYNC_SUFFIX) ?? "null");
+    if (isRecord(parsed) && (parsed.revision === null || typeof parsed.revision === "string")) return { revision: parsed.revision as string | null, base: parsed.base ?? null };
+  } catch {
+    /* sin referencia previa */
+  }
+  return null;
+}
+
+function writeSyncMeta(key: string, meta: SyncMeta) {
+  try {
+    window.localStorage.setItem(key + SYNC_SUFFIX, JSON.stringify(meta));
+  } catch {
+    /* almacenamiento lleno o bloqueado */
+  }
+}
+
+async function errorMessage(response: Response, fallback: string): Promise<string> {
+  const result = (await response.json().catch(() => null)) as { error?: string } | null;
+  return result?.error || fallback;
+}
+
+function createTransport(userId: string): Transport {
+  return {
+    async get() {
+      const response = await fetch("/api/user-state", { cache: "no-store" });
+      if (!response.ok) throw new Error(await errorMessage(response, `No se pudo leer la nube (HTTP ${response.status}). Los cambios locales siguen disponibles.`));
+      const result = (await response.json()) as { userId?: string; state?: unknown; updatedAt?: string | null };
+      // Nunca se acepta una respuesta de una identidad distinta a la sesión verificada.
+      if (result.userId !== userId) throw new Error("La respuesta de la nube no coincide con la cuenta actual. Los datos permanecen solo en este dispositivo.");
+      return { state: result.state ?? null, updatedAt: result.updatedAt ?? null };
+    },
+    async put(state, baseRevision) {
+      const response = await fetch("/api/user-state", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state, baseRevision }),
+      });
+      if (response.status === 409) {
+        const result = (await response.json().catch(() => null)) as { state?: unknown; updatedAt?: string | null } | null;
+        return { conflict: true as const, state: result?.state ?? null, updatedAt: result?.updatedAt ?? null };
+      }
+      if (!response.ok) throw new Error(await errorMessage(response, `Error de sincronización (HTTP ${response.status}).`));
+      const result = (await response.json().catch(() => null)) as { updatedAt?: string | null } | null;
+      return { ok: true as const, updatedAt: result?.updatedAt ?? null };
+    },
+  };
+}
+
+/** Mínimo entre actualizaciones automáticas al volver a la app (evita peticiones repetidas). */
+const REFRESH_MIN_MS = 8000;
+/** Tiempo de espera antes de reintentar un guardado que falló. */
+const RETRY_AFTER_MS = 20000;
+
 export function StoreProvider({ children, userId }: { children: ReactNode; userId: string }) {
   const [state, setState] = useState<AppState>(emptyState);
   const [ready, setReady] = useState(false);
@@ -185,62 +255,158 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
   const [cloudSyncStatus, setCloudSyncStatus] = useState<CloudSyncStatus>("loading");
   const [cloudSyncMessage, setCloudSyncMessage] = useState<string | null>(null);
 
+  const transport = useMemo(() => createTransport(userId), [userId]);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const metaRef = useRef<SyncMeta>(EMPTY_META);
+  const keyRef = useRef<string | null>(null);
+  const cloudReadyRef = useRef(false);
+  const inFlight = useRef(false);
+  const queued = useRef(false);
+  const lastRefresh = useRef(0);
+  const pushRef = useRef<() => Promise<void>>(async () => {});
+  const retryTimer = useRef<number | null>(null);
+  const refreshRef = useRef<(force?: boolean) => Promise<void>>(async () => {});
+
+  /**
+   * Aplica un estado que llegó de la nube sin pisar lo que la persona editó mientras tanto:
+   * si hubo ediciones durante la petición, se vuelven a fusionar sobre el estado recibido.
+   */
+  const applyIncoming = useCallback((snapshot: AppState, incoming: AppState) => {
+    setState((current) => (deepEqual(current, snapshot) ? incoming : sanitize(mergeStates(snapshot, current, incoming))));
+  }, []);
+
   useEffect(() => {
     let active = true;
-    const userStorageKey = `${STORAGE_KEY}:${userId}`;
-
-    async function loadUserState() {
-      let cloudState: unknown = null;
-      let cloudReadSucceeded = false;
-      let readFailure = "No se pudo verificar la sincronización en la nube.";
-      try {
-        const response = await fetch("/api/user-state", { cache: "no-store" });
-        if (response.ok) {
-          const result = await response.json() as { userId?: string; state?: unknown };
-          // Never accept a response for an identity other than the verified session.
-          if (result.userId === userId) {
-            cloudState = result.state ?? null;
-            cloudReadSucceeded = true;
-          } else {
-            readFailure = "La respuesta de la nube no coincide con la cuenta actual. Los datos permanecen solo en este dispositivo.";
-          }
-        } else {
-          const result = await response.json().catch(() => null) as { error?: string } | null;
-          readFailure = result?.error || `No se pudo leer la nube (HTTP ${response.status}). Los cambios locales siguen disponibles.`;
-        }
-      } catch {
-        readFailure = "No hay conexión con la nube. Los cambios se conservan en este dispositivo.";
-      }
-
-      let nextState = emptyState();
-      if (cloudState && typeof cloudState === "object" && !Array.isArray(cloudState)) {
-        nextState = sanitize(cloudState);
-      } else {
-        try {
-          const raw = window.localStorage.getItem(userStorageKey);
-          if (raw) nextState = sanitize(JSON.parse(raw));
-        } catch {
-          // A corrupt local snapshot is ignored without affecting another user's data.
-        }
-      }
-
-      if (!active) return;
-      setState(nextState);
-      setStorageKey(userStorageKey);
-      setCloudReady(cloudReadSucceeded);
-      setCloudSyncStatus(cloudReadSucceeded ? "synced" : "local-only");
-      setCloudSyncMessage(cloudReadSucceeded ? null : readFailure);
-      setReady(true);
-    }
-
+    const key = `${STORAGE_KEY}:${userId}`;
     setReady(false);
     setStorageKey(null);
     setCloudReady(false);
     setCloudSyncStatus("loading");
     setCloudSyncMessage(null);
-    void loadUserState();
-    return () => { active = false; };
-  }, [userId]);
+    metaRef.current = EMPTY_META;
+    keyRef.current = null;
+    cloudReadyRef.current = false;
+    inFlight.current = false;
+    queued.current = false;
+
+    void (async () => {
+      const local = readLocalState(key);
+      const localMeta = readSyncMeta(key);
+      try {
+        const remote = await transport.get();
+        if (!active) return;
+        const result = reconcileOnLoad(local, localMeta, remote, codec);
+        metaRef.current = result.meta;
+        writeSyncMeta(key, result.meta);
+        keyRef.current = key;
+        cloudReadyRef.current = true;
+        setState(result.state);
+        setStorageKey(key);
+        setCloudReady(true);
+        setCloudSyncStatus("synced");
+        setCloudSyncMessage(null);
+      } catch (error) {
+        if (!active) return;
+        metaRef.current = localMeta ?? EMPTY_META;
+        keyRef.current = key;
+        cloudReadyRef.current = false;
+        setState(local);
+        setStorageKey(key);
+        setCloudReady(false);
+        setCloudSyncStatus("local-only");
+        setCloudSyncMessage(error instanceof Error ? error.message : "No se pudo verificar la sincronización en la nube.");
+      }
+      if (active) setReady(true);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [userId, transport]);
+
+  /** Sube los cambios locales; si otro dispositivo guardó antes, fusiona y reintenta. */
+  const push = useCallback(async () => {
+    const key = keyRef.current;
+    if (!key || !cloudReadyRef.current) return;
+    if (inFlight.current) {
+      queued.current = true;
+      return;
+    }
+    const snapshot = stateRef.current;
+    if (!isDirty(snapshot, metaRef.current, codec)) {
+      setCloudSyncStatus("synced");
+      return;
+    }
+    inFlight.current = true;
+    if (retryTimer.current !== null) {
+      window.clearTimeout(retryTimer.current);
+      retryTimer.current = null;
+    }
+    setCloudSyncStatus("saving");
+    setCloudSyncMessage(null);
+    try {
+      const result = await pushState(snapshot, metaRef.current, transport, codec);
+      metaRef.current = result.meta;
+      writeSyncMeta(key, result.meta);
+      if (!deepEqual(result.state, snapshot)) applyIncoming(snapshot, result.state);
+      setCloudSyncStatus("synced");
+    } catch (error) {
+      setCloudSyncStatus("error");
+      setCloudSyncMessage(error instanceof Error ? error.message : "No se pudieron guardar los cambios en la nube. La copia local se conserva.");
+      // Un fallo de red es temporal: se reintenta solo, sin perder nada de lo local.
+      if (retryTimer.current !== null) window.clearTimeout(retryTimer.current);
+      retryTimer.current = window.setTimeout(() => void pushRef.current(), RETRY_AFTER_MS);
+    } finally {
+      inFlight.current = false;
+      if (queued.current) {
+        queued.current = false;
+        void pushRef.current();
+      }
+    }
+  }, [transport, applyIncoming]);
+  pushRef.current = push;
+
+  /** Trae lo que otro dispositivo guardó (y reconecta si la primera conexión había fallado). */
+  const refresh = useCallback(
+    async (force = false) => {
+      const key = keyRef.current;
+      if (!key || inFlight.current) return;
+      const now = Date.now();
+      if (!force && now - lastRefresh.current < REFRESH_MIN_MS) return;
+      lastRefresh.current = now;
+      inFlight.current = true;
+      try {
+        const snapshot = stateRef.current;
+        if (!cloudReadyRef.current) {
+          const remote = await transport.get();
+          const result = reconcileOnLoad(snapshot, metaRef.current.base ? metaRef.current : readSyncMeta(key), remote, codec);
+          metaRef.current = result.meta;
+          writeSyncMeta(key, result.meta);
+          cloudReadyRef.current = true;
+          applyIncoming(snapshot, result.state);
+          setCloudReady(true);
+          setCloudSyncStatus("synced");
+          setCloudSyncMessage(null);
+        } else {
+          const pulled = await pullState(snapshot, metaRef.current, transport, codec);
+          if (pulled) {
+            metaRef.current = pulled.meta;
+            writeSyncMeta(key, pulled.meta);
+            applyIncoming(snapshot, pulled.state);
+          }
+        }
+      } catch {
+        /* sin conexión: se reintenta al volver a la app o al recuperar internet */
+      } finally {
+        inFlight.current = false;
+        queued.current = false;
+        // Lo que se editó sin conexión se sube en cuanto vuelve la conexión.
+        if (cloudReadyRef.current && isDirty(stateRef.current, metaRef.current, codec)) void pushRef.current();
+      }
+    },
+    [transport, applyIncoming],
+  );
+  refreshRef.current = refresh;
 
   useEffect(() => {
     if (!ready || !storageKey) return;
@@ -249,37 +415,35 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
     } catch {
       /* almacenamiento lleno o bloqueado */
     }
-
-    // Never overwrite cloud data unless the initial cloud read succeeded.
-    if (!cloudReady) return;
-    const controller = new AbortController();
-    const saveTimer = window.setTimeout(async () => {
-      setCloudSyncStatus("saving");
-      setCloudSyncMessage(null);
-      try {
-        const response = await fetch("/api/user-state", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ state }),
-          signal: controller.signal,
-        });
-        if (!response.ok) {
-          const result = await response.json().catch(() => null) as { error?: string } | null;
-          throw new Error(result?.error || `Error de sincronización (HTTP ${response.status}).`);
-        }
-        setCloudSyncStatus("synced");
-        setCloudSyncMessage(null);
-      } catch (error) {
-        if (controller.signal.aborted) return;
-        setCloudSyncStatus("error");
-        setCloudSyncMessage(error instanceof Error ? error.message : "No se pudieron guardar los cambios en la nube. La copia local se conserva.");
-      }
-    }, 700);
-    return () => {
-      window.clearTimeout(saveTimer);
-      controller.abort();
-    };
+    // Nunca se sube nada si la conexión inicial con la nube no tuvo éxito.
+    if (!cloudReady || !isDirty(state, metaRef.current, codec)) return;
+    const timer = window.setTimeout(() => void pushRef.current(), 700);
+    return () => window.clearTimeout(timer);
   }, [state, ready, storageKey, cloudReady]);
+
+  useEffect(
+    () => () => {
+      if (retryTimer.current !== null) window.clearTimeout(retryTimer.current);
+    },
+    [],
+  );
+
+  // Al volver a la app o recuperar internet, se traen los cambios de otros dispositivos.
+  useEffect(() => {
+    if (!ready) return;
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshRef.current();
+    };
+    const onOnline = () => void refreshRef.current(true);
+    window.addEventListener("focus", onVisible);
+    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", onVisible);
+      window.removeEventListener("online", onOnline);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [ready]);
 
   const addWater = useCallback((date: string, ml: number) => {
     setState((s) => {

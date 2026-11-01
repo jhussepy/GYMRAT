@@ -116,3 +116,13 @@ npm test
 ```
 
 Simulan usuarios nuevos y recurrentes en un navegador de prueba: registro completo, validaciones, aislamiento entre cuentas, sincronización con la nube y edición del perfil.
+
+## Sincronización entre dispositivos
+
+Tus datos viven en tu navegador y se sincronizan con tu fila de Supabase. Para que usar el celular y el computador a la vez no haga perder información:
+
+- **Guardado condicional:** cada guardado indica sobre qué versión de la nube se basa. Si otro dispositivo guardó antes, el servidor responde 409 en lugar de sobrescribir, y la app fusiona ambos cambios y vuelve a guardar. No requiere cambios en la base de datos: la versión es la columna `updated_at`.
+- **Fusión de 3 vías** (`src/lib/sync-merge.ts`): se compara con el último estado sincronizado. Se conservan los cambios de ambos dispositivos, incluidas las eliminaciones; el agua de dos dispositivos se suma; el perfil nunca mezcla campos de dos versiones; si ambos editan exactamente el mismo dato, gana el dispositivo en uso.
+- **Sin conexión:** los cambios se guardan en el dispositivo, se reintentan solos y se fusionan al reconectar. Si la primera conexión con la nube falla, no se sube nada.
+- **Al volver a la app** (o al recuperar internet) se traen los cambios del otro dispositivo.
+- **Limitación conocida:** si dos dispositivos suman exactamente la misma cantidad de agua a la vez, sin haberse actualizado entre medias, se cuenta una sola vez.

@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "@/components/App";
 import { STORAGE_KEY } from "@/lib/config";
+import { cloud, fakeCloud } from "./fake-cloud";
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: React.ReactNode } & Record<string, unknown>) => (
@@ -11,22 +12,9 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-/** Servidor simulado: una fila por usuario, igual que la tabla real de Supabase. */
-const cloud: Record<string, unknown> = {};
-let currentUser = "user_a";
-
 beforeEach(() => {
-  for (const key of Object.keys(cloud)) delete cloud[key];
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (_url: string, init?: RequestInit) => {
-      if (init?.method === "PUT") {
-        cloud[currentUser] = (JSON.parse(String(init.body)) as { state: unknown }).state;
-        return new Response(JSON.stringify({ ok: true }), { status: 200 });
-      }
-      return new Response(JSON.stringify({ userId: currentUser, state: cloud[currentUser] ?? null }), { status: 200 });
-    }),
-  );
+  fakeCloud.reset();
+  fakeCloud.install();
 });
 
 afterEach(() => vi.unstubAllGlobals());
@@ -37,7 +25,7 @@ const type = (label: RegExp, value: string) => fireEvent.change(field(label), { 
 const next = () => fireEvent.click(screen.getByRole("button", { name: /continuar/i }));
 
 async function mount(userId: string) {
-  currentUser = userId;
+  fakeCloud.user = userId;
   const view = render(<App userId={userId} />);
   await screen.findByRole("heading", { name: /sobre ti/i }, { timeout: 4000 });
   return view;
@@ -165,7 +153,7 @@ describe("aislamiento entre cuentas", () => {
     first.unmount();
     window.localStorage.clear();
 
-    currentUser = "user_back";
+    fakeCloud.user = "user_back";
     render(<App userId="user_back" />);
     await waitFor(() => expect(screen.getAllByRole("button", { name: /mi día/i }).length).toBeGreaterThan(0), { timeout: 4000 });
     expect(screen.queryByRole("heading", { name: /sobre ti/i })).toBeNull();
