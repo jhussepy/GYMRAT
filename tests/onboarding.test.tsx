@@ -48,6 +48,8 @@ async function completeOnboarding(opts: { trading?: boolean } = {}) {
   next();
   await screen.findByRole("heading", { name: /tus metas diarias/i });
   if (opts.trading) fireEvent.click(screen.getByRole("checkbox", { name: /trading/i }));
+  // El consentimiento sobre los datos de salud es obligatorio para completar el registro.
+  fireEvent.click(screen.getByRole("checkbox", { name: /entiendo y acepto/i }));
   fireEvent.click(screen.getByRole("button", { name: /empezar/i }));
 }
 

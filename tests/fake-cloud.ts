@@ -12,6 +12,10 @@ export class FakeCloud {
   /** Simula que no hay conexión. */
   down = false;
   puts = 0;
+  /** Se marca cuando se pide eliminar la cuenta. */
+  accountDeleted = false;
+  accountFails = false;
+  deletes = 0;
 
   reset() {
     this.rows.clear();
@@ -19,6 +23,9 @@ export class FakeCloud {
     this.user = "user_a";
     this.down = false;
     this.puts = 0;
+    this.accountDeleted = false;
+    this.accountFails = false;
+    this.deletes = 0;
   }
 
   seed(user: string, state: unknown) {
@@ -32,7 +39,7 @@ export class FakeCloud {
   install() {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async (_url: string, init?: RequestInit) => this.handle(init)),
+      vi.fn(async (url: string, init?: RequestInit) => this.handle(String(url), init)),
     );
   }
 
@@ -40,8 +47,19 @@ export class FakeCloud {
     return new Response(JSON.stringify(data), { status });
   }
 
-  private handle(init?: RequestInit): Response {
+  private handle(url: string, init?: RequestInit): Response {
     if (this.down) throw new TypeError("Failed to fetch");
+    if (url.includes("/api/account")) {
+      if (this.accountFails) return this.json({ error: "Tus datos se borraron, pero la cuenta no pudo eliminarse.", dataDeleted: true }, 502);
+      this.rows.delete(this.user);
+      this.accountDeleted = true;
+      return this.json({ ok: true });
+    }
+    if (init?.method === "DELETE") {
+      this.deletes++;
+      this.rows.delete(this.user);
+      return this.json({ ok: true });
+    }
     const row = this.rows.get(this.user);
     if (init?.method !== "PUT") return this.json({ userId: this.user, state: row?.state ?? null, updatedAt: row?.rev ?? null });
 

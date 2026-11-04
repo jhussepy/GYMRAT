@@ -31,6 +31,8 @@ export interface UserProfile {
   waterGoalMl: number;
   modules: { trading: boolean };
   createdAt: string;
+  /** Cuándo aceptó la política de privacidad y el tratamiento de sus datos de salud. */
+  consentAt?: string;
 }
 
 export const MIN_ADULT_AGE = 18;
@@ -301,6 +303,7 @@ export function sanitizeProfile(raw: unknown, now: Date = new Date()): UserProfi
     waterGoalMl: num(raw.waterGoalMl),
     modules: { trading: modules.trading === true },
     createdAt: str(raw.createdAt) || now.toISOString().slice(0, 10),
+    consentAt: str(raw.consentAt) && !Number.isNaN(Date.parse(str(raw.consentAt))) ? str(raw.consentAt) : undefined,
   };
 
   const problems = [

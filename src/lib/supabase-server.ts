@@ -52,3 +52,13 @@ export function supabaseHeaders(key: string): Record<string, string> {
   if (!key.startsWith("sb_")) headers.Authorization = `Bearer ${key}`;
   return headers;
 }
+
+/** Llamada a la API REST de Supabase con la clave de servidor. */
+export async function databaseRequest(path: string, init: RequestInit = {}) {
+  const { url, key } = readSupabaseConfig();
+  return fetch(`${url}/rest/v1/${path}`, {
+    ...init,
+    cache: "no-store",
+    headers: { ...supabaseHeaders(key), ...init.headers },
+  });
+}

@@ -155,6 +155,8 @@ function sanitize(raw: unknown): AppState {
 export type CloudSyncStatus = "loading" | "local-only" | "saving" | "synced" | "error";
 
 interface StoreValue {
+  /** Identificador de la cuenta con la que se abrió la app. */
+  userId: string;
   state: AppState;
   ready: boolean;
   cloudSyncStatus: CloudSyncStatus;
@@ -175,6 +177,8 @@ interface StoreValue {
   exportJSON: () => string;
   importJSON: (text: string) => boolean;
   resetAll: () => void;
+  /** Borra todos tus datos de la nube y de este dispositivo, incluido el perfil. La cuenta de acceso se conserva. */
+  eraseAllData: () => Promise<void>;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -200,6 +204,17 @@ function readSyncMeta(key: string): SyncMeta | null {
     /* sin referencia previa */
   }
   return null;
+}
+
+/** Quita de este navegador todo lo guardado de una cuenta (datos y referencia de sincronización). */
+export function clearStoredUserData(userId: string) {
+  try {
+    const key = `${STORAGE_KEY}:${userId}`;
+    window.localStorage.removeItem(key);
+    window.localStorage.removeItem(key + SYNC_SUFFIX);
+  } catch {
+    /* almacenamiento bloqueado */
+  }
 }
 
 function writeSyncMeta(key: string, meta: SyncMeta) {
@@ -561,9 +576,20 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
   // Borrar todo conserva tu perfil: son tus ajustes de cuenta, no tus registros.
   const resetAll = useCallback(() => setState((s) => ({ ...emptyState(), profile: s.profile })), []);
 
+  const eraseAllData = useCallback(async () => {
+    const response = await fetch("/api/user-state", { method: "DELETE" });
+    if (!response.ok) throw new Error(await errorMessage(response, "No se pudieron borrar tus datos de la nube. Inténtalo de nuevo."));
+    if (retryTimer.current !== null) window.clearTimeout(retryTimer.current);
+    clearStoredUserData(userId);
+    metaRef.current = EMPTY_META;
+    setState(emptyState());
+    setCloudSyncStatus("synced");
+    setCloudSyncMessage(null);
+  }, [userId]);
+
   const value = useMemo<StoreValue>(
-    () => ({ state, ready, cloudSyncStatus, cloudSyncMessage, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, setSession, saveSleepRecovery, saveProfile, exportJSON, importJSON, resetAll }),
-    [state, ready, cloudSyncStatus, cloudSyncMessage, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, setSession, saveSleepRecovery, saveProfile, exportJSON, importJSON, resetAll],
+    () => ({ userId, state, ready, cloudSyncStatus, cloudSyncMessage, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, setSession, saveSleepRecovery, saveProfile, exportJSON, importJSON, resetAll, eraseAllData }),
+    [userId, state, ready, cloudSyncStatus, cloudSyncMessage, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, setSession, saveSleepRecovery, saveProfile, exportJSON, importJSON, resetAll, eraseAllData],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

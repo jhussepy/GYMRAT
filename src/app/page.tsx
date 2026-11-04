@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, Check, Dumbbell, TrendingUp, Utensils } from "lucide-react";
+import { DeletedNotice } from "@/components/landing/DeletedNotice";
 import { LandingHeader } from "@/components/landing/LandingHeader";
 import { ProductPreview } from "@/components/landing/ProductPreview";
 import { HERO_BLUR } from "@/components/landing/hero-blur";
@@ -40,6 +41,7 @@ export default function HomePage() {
       <a href="#contenido" className="sr-only focus:not-sr-only" style={{ position: "absolute", zIndex: 60, left: 8, top: 8, background: "#fff", color: "#000", padding: "10px 14px" }}>
         Saltar al contenido
       </a>
+      <DeletedNotice />
       <LandingHeader />
 
       <main id="contenido">
@@ -239,6 +241,13 @@ export default function HomePage() {
             <ul>
               <li><Link href="/crear-cuenta">Crear cuenta</Link></li>
               <li><Link href="/iniciar-sesion">Iniciar sesión</Link></li>
+            </ul>
+          </nav>
+          <nav aria-label="Legal">
+            <p className="lp-foot-title">Legal</p>
+            <ul>
+              <li><Link href="/privacidad">Política de privacidad</Link></li>
+              <li><Link href="/terminos">Términos de uso</Link></li>
             </ul>
           </nav>
         </div>

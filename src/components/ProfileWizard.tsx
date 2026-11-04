@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, type ReactNode } from "react";
 import { ArrowLeft, ArrowRight, Check, Dumbbell } from "lucide-react";
 import { WEEKDAYS, type Weekday } from "@/lib/config";
@@ -111,6 +112,7 @@ export function ProfileWizard({ mode, initial, onSave, onCancel }: Props) {
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<string[]>([]);
   const [cutoffTouched, setCutoffTouched] = useState(mode === "edit");
+  const [consent, setConsent] = useState(Boolean(initial?.consentAt));
   const [over, setOver] = useState<Overrides>(() => (initial ? { kcal: String(initial.kcalTarget), protein: String(initial.proteinTargetG), water: String(initial.waterGoalMl) } : {}));
 
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setD((prev) => ({ ...prev, [key]: value }));
@@ -168,6 +170,10 @@ export function ProfileWizard({ mode, initial, onSave, onCancel }: Props) {
         return;
       }
     }
+    if (mode === "new" && !consent) {
+      setErrors(["Para continuar debes aceptar el tratamiento de tus datos de salud y la política de privacidad."]);
+      return;
+    }
     const start = round1(parseNum(d.weightKg));
     const profile: UserProfile = {
       name: d.name.trim().slice(0, 40),
@@ -191,6 +197,7 @@ export function ProfileWizard({ mode, initial, onSave, onCancel }: Props) {
       waterGoalMl: Math.round(parseNum(water)),
       modules: { trading: d.trading },
       createdAt: initial?.createdAt ?? todayISO(),
+      consentAt: initial?.consentAt ?? (consent ? new Date().toISOString() : undefined),
     };
     // Última barrera: el mismo validador que protege los datos guardados.
     if (!sanitizeProfile(profile)) {
@@ -372,6 +379,17 @@ export function ProfileWizard({ mode, initial, onSave, onCancel }: Props) {
                 <span className="block text-xs text-muted">Añade una pestaña para organizar tu estudio. Puedes cambiarlo después.</span>
               </span>
             </label>
+
+            {mode === "new" && (
+              <label className="flex min-h-11 items-start gap-3 rounded-xl border border-line/70 p-3 text-sm">
+                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-flame" />
+                <span>
+                  Entiendo y acepto que GYMRAT guarde mis datos de salud (peso, medidas, entrenamiento, comidas y sueño) para calcular mis metas y mostrarme mi progreso, como explica la{" "}
+                  <Link href="/privacidad" target="_blank" rel="noopener" className="underline underline-offset-2">Política de privacidad</Link> y los{" "}
+                  <Link href="/terminos" target="_blank" rel="noopener" className="underline underline-offset-2">Términos de uso</Link>.
+                </span>
+              </label>
+            )}
 
             <p className="text-xs leading-5 text-muted">
               GYMRAT ofrece estimaciones orientativas y no sustituye el consejo de un profesional de la salud. Si tienes una condición médica, estás embarazada o tomas medicación, consúltalo antes de cambiar tu alimentación o tu entrenamiento.

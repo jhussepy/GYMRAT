@@ -1,18 +1,9 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { readSupabaseConfig, supabaseHeaders } from "@/lib/supabase-server";
+import { databaseRequest } from "@/lib/supabase-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-async function databaseRequest(path: string, init: RequestInit = {}) {
-  const { url, key } = readSupabaseConfig();
-  return fetch(`${url}/rest/v1/${path}`, {
-    ...init,
-    cache: "no-store",
-    headers: { ...supabaseHeaders(key), ...init.headers },
-  });
-}
 
 export async function GET() {
   let userId: string | null;
@@ -137,5 +128,27 @@ export async function PUT(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "No se pudo conectar con Supabase.";
     return NextResponse.json({ error: message }, { status: 503 });
+  }
+}
+
+/** Borra todos los datos del usuario en la nube. La cuenta de acceso no se toca. */
+export async function DELETE() {
+  let userId: string | null;
+  try {
+    ({ userId } = await auth());
+  } catch {
+    return NextResponse.json({ error: "No se pudo verificar la sesión. Revisa la configuración de Clerk en el servidor." }, { status: 503 });
+  }
+  if (!userId) return NextResponse.json({ error: "Debes iniciar sesión." }, { status: 401 });
+  try {
+    const query = new URLSearchParams({ user_id: `eq.${userId}` });
+    const response = await databaseRequest(`gymrat_user_state?${query.toString()}`, { method: "DELETE" });
+    if (!response.ok) {
+      const detail = await response.text();
+      return NextResponse.json({ error: detail || "No se pudieron borrar tus datos de Supabase." }, { status: 502 });
+    }
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "No se pudo conectar con Supabase." }, { status: 503 });
   }
 }

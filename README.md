@@ -126,3 +126,11 @@ Tus datos viven en tu navegador y se sincronizan con tu fila de Supabase. Para q
 - **Sin conexión:** los cambios se guardan en el dispositivo, se reintentan solos y se fusionan al reconectar. Si la primera conexión con la nube falla, no se sube nada.
 - **Al volver a la app** (o al recuperar internet) se traen los cambios del otro dispositivo.
 - **Limitación conocida:** si dos dispositivos suman exactamente la misma cantidad de agua a la vez, sin haberse actualizado entre medias, se cuenta una sola vez.
+
+## Privacidad y control de datos
+
+- **Consentimiento explícito:** el registro exige aceptar el tratamiento de los datos de salud; la fecha se guarda en el perfil (`consentAt`). Las cuentas anteriores ven una pantalla de aceptación una sola vez.
+- **Borrar mis datos** (Progreso → Privacidad y datos): elimina el perfil y todos los registros, en la nube (`DELETE /api/user-state`) y en el dispositivo. La cuenta de acceso se conserva.
+- **Eliminar mi cuenta** (`DELETE /api/account`, requiere escribir ELIMINAR): borra primero los datos de Supabase y, solo si salió bien, la cuenta en Clerk, para que nunca queden datos huérfanos. Si falla el segundo paso se avisa y se puede reintentar.
+- **Páginas legales:** `/privacidad` y `/terminos`, enlazadas desde la portada, el registro y la app. Configura `NEXT_PUBLIC_LEGAL_NAME` y `NEXT_PUBLIC_CONTACT_EMAIL` para mostrar quién es el responsable y un correo de contacto. Revisa el texto con un profesional legal antes de publicarlo, sobre todo si tienes usuarios en la Unión Europea.
+- **Si un usuario borra su cuenta desde el panel de Clerk** (y no desde la app), su fila de Supabase no se elimina sola. Para cubrirlo, añade en Clerk un webhook `user.deleted` que borre esa fila.

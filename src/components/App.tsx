@@ -12,6 +12,7 @@ import { LogisticsTab } from "./LogisticsTab";
 import { ProgressTab } from "./ProgressTab";
 import { ThemeToggle } from "./ThemeToggle";
 import { ProfileWizard } from "./ProfileWizard";
+import { ConsentScreen } from "./ConsentScreen";
 import Link from "next/link";
 import { UserRound } from "lucide-react";
 
@@ -47,6 +48,7 @@ function Gate() {
     );
   }
   if (!state.profile) return <ProfileWizard mode="new" onSave={saveProfile} />;
+  if (!state.profile.consentAt) return <ConsentScreen profile={state.profile} onAccept={saveProfile} />;
   return <Shell />;
 }
 
