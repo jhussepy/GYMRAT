@@ -2,18 +2,20 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { StoreProvider, useStore } from "@/lib/store";
 import { STORAGE_KEY } from "@/lib/config";
+import { waterTotal, type WaterEntry } from "@/lib/water";
 import { cloud, fakeCloud } from "./fake-cloud";
 
 const DAY = "2026-10-29";
-type CloudState = { water?: Record<string, number>; weights?: { date: string; kg: number }[] };
+type CloudState = { water?: Record<string, number>; waterLog?: Record<string, WaterEntry[]>; weights?: { date: string; kg: number }[] };
 const inCloud = () => (cloud["u"] ?? {}) as CloudState;
+const cloudWater = () => waterTotal({ water: inCloud().water ?? {}, waterLog: inCloud().waterLog ?? {} }, DAY);
 
 function Probe({ name }: { name: string }) {
   const { state, ready, cloudSyncStatus, addWater, saveWeight } = useStore();
   return (
     <div>
       <span data-testid={`${name}-status`}>{ready ? cloudSyncStatus : "cargando"}</span>
-      <span data-testid={`${name}-water`}>{state.water[DAY] ?? 0}</span>
+      <span data-testid={`${name}-water`}>{waterTotal(state, DAY)}</span>
       <span data-testid={`${name}-weights`}>{state.weights.map((w) => w.date).join(",")}</span>
       <button onClick={() => addWater(DAY, 250)}>{name} agua</button>
       <button onClick={() => addWater(DAY, 500)}>{name} agua grande</button>
@@ -47,7 +49,7 @@ describe("dos dispositivos con la app completa", () => {
 
     // B sigue abierto con datos viejos (no sabe del peso) y registra agua.
     click("B agua");
-    await waitFor(() => expect(inCloud().water?.[DAY]).toBe(250), { timeout: 4000 });
+    await waitFor(() => expect(cloudWater()).toBe(250), { timeout: 4000 });
     expect(inCloud().weights).toHaveLength(1); // antes esto borraba el peso de A
     expect(text("B-weights")).toBe("2026-10-01"); // y B ya ve el peso de A
 
@@ -65,10 +67,34 @@ describe("dos dispositivos con la app completa", () => {
     await ready("A");
     await ready("B");
     click("A agua");
-    await waitFor(() => expect(inCloud().water?.[DAY]).toBe(250), { timeout: 4000 });
+    await waitFor(() => expect(cloudWater()).toBe(250), { timeout: 4000 });
     click("B agua grande"); // B no sabía del vaso de A y suma 500 ml por su cuenta
-    await waitFor(() => expect(inCloud().water?.[DAY]).toBe(750), { timeout: 4000 });
+    await waitFor(() => expect(cloudWater()).toBe(750), { timeout: 4000 });
     await waitFor(() => expect(text("B-water")).toBe("750"));
+  });
+
+  it("dos dispositivos que suman exactamente el mismo vaso a la vez cuentan dos vasos", async () => {
+    device("A");
+    device("B");
+    await ready("A");
+    await ready("B");
+
+    // Ninguno de los dos sabe del otro: los dos suman 250 ml antes de sincronizar.
+    click("A agua");
+    click("B agua");
+    await waitFor(() => expect(cloudWater()).toBe(500), { timeout: 6000 });
+    expect(inCloud().waterLog?.[DAY]).toHaveLength(2);
+
+    act(() => {
+      window.dispatchEvent(new Event("focus"));
+    });
+    await waitFor(
+      () => {
+        expect(text("A-water")).toBe("500");
+        expect(text("B-water")).toBe("500");
+      },
+      { timeout: 4000 },
+    );
   });
 
   it("sin conexión no se pierde nada y todo se sube al volver internet", async () => {
@@ -81,13 +107,13 @@ describe("dos dispositivos con la app completa", () => {
     click("A agua");
     await waitFor(() => expect(text("A-status")).toBe("error"), { timeout: 4000 });
     expect(text("A-water")).toBe("250"); // sigue en el dispositivo
-    expect(inCloud().water?.[DAY]).toBeUndefined();
+    expect(cloudWater()).toBe(0);
 
     fakeCloud.down = false;
     act(() => {
       window.dispatchEvent(new Event("online"));
     });
-    await waitFor(() => expect(inCloud().water?.[DAY]).toBe(250), { timeout: 4000 });
+    await waitFor(() => expect(cloudWater()).toBe(250), { timeout: 4000 });
     await waitFor(() => expect(text("A-status")).toBe("synced"));
   });
 
@@ -111,7 +137,7 @@ describe("dos dispositivos con la app completa", () => {
     await ready("A");
     expect(text("A-water")).toBe("250"); // lo hecho sin conexión sigue
     expect(text("A-weights")).toBe("2026-10-01,2026-10-08"); // y llegó lo del otro dispositivo
-    await waitFor(() => expect(inCloud().water?.[DAY]).toBe(250), { timeout: 4000 });
+    await waitFor(() => expect(cloudWater()).toBe(250), { timeout: 4000 });
     expect(inCloud().weights).toHaveLength(2);
   });
 

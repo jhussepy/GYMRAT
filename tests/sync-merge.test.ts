@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { deepEqual, mergeStates } from "@/lib/sync-merge";
 
 type S = Record<string, unknown>;
-const empty = (): S => ({ version: 9, water: {}, workoutLogs: {}, weights: [], bodyMeasurements: [], nutritionEntries: {}, shopping: {}, sessions: {}, sleepRecovery: {} });
+const empty = (): S => ({ version: 10, water: {}, waterLog: {}, workoutLogs: {}, weights: [], bodyMeasurements: [], nutritionEntries: {}, shopping: {}, sessions: {}, sleepRecovery: {} });
 const make = (over: S): S => ({ ...empty(), ...over });
 const merge = (base: S | null, local: S, remote: S) => mergeStates<S>(base, local, remote);
 
@@ -83,6 +83,40 @@ describe("cambios en ambos dispositivos sobre cosas distintas", () => {
     const remote = make({ workoutLogs: { "2026-10-29": { "mar-1": [{ kg: "40", reps: "12" }] } } });
     const out = merge(make({}), local, remote).workoutLogs as Record<string, unknown>;
     expect(Object.keys(out).sort()).toEqual(["2026-10-28", "2026-10-29"]);
+  });
+});
+
+describe("agua registrada vaso por vaso", () => {
+  const glass = (id: string, ml = 250) => ({ id, ml });
+  const log = (date: string, ...entries: { id: string; ml: number }[]) => make({ waterLog: { [date]: entries } });
+  const ids = (state: S, date: string) => ((state.waterLog as Record<string, { id: string }[]>)[date] ?? []).map((e) => e.id).sort();
+
+  it("dos dispositivos que suman exactamente el mismo vaso desde la misma base son dos vasos", () => {
+    expect(ids(merge(make({}), log("d", glass("a")), log("d", glass("b"))), "d")).toEqual(["a", "b"]);
+  });
+  it("un guardado reenviado (misma identidad) no se cuenta dos veces", () => {
+    const ours = log("d", glass("a"), glass("b"));
+    expect(ids(merge(log("d", glass("a")), ours, ours), "d")).toEqual(["a", "b"]);
+  });
+  it("conserva los vasos nuevos de cada lado y los anteriores", () => {
+    const out = merge(log("d", glass("a")), log("d", glass("a"), glass("b")), log("d", glass("a"), glass("c")));
+    expect(ids(out, "d")).toEqual(["a", "b", "c"]);
+  });
+  it("quitar el último vaso en un dispositivo y añadir otro en el otro respeta ambas acciones", () => {
+    const base = log("d", glass("a"), glass("b"));
+    expect(ids(merge(base, log("d", glass("a")), log("d", glass("a"), glass("b"), glass("c"))), "d")).toEqual(["a", "c"]);
+  });
+  it("si los dos quitan el mismo vaso, se quita una sola vez", () => {
+    const base = log("d", glass("a"), glass("b"));
+    expect(ids(merge(base, log("d", glass("a")), log("d", glass("a"))), "d")).toEqual(["a"]);
+  });
+  it("si se quitan todos los vasos del día, la fecha desaparece", () => {
+    const base = log("d", glass("a"));
+    expect(merge(base, make({}), base).waterLog).toEqual({});
+  });
+  it("vasos de días distintos se unen", () => {
+    const out = merge(make({}), log("d1", glass("a")), log("d2", glass("b")));
+    expect(Object.keys(out.waterLog as object).sort()).toEqual(["d1", "d2"]);
   });
 });
 

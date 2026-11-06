@@ -6,6 +6,7 @@ import type { ScheduleItem } from "./data";
 import { buildSchedule, sanitizeProfile, type UserProfile } from "./profile";
 import { EMPTY_META, isDirty, pullState, pushState, reconcileOnLoad, type Codec, type SyncMeta, type Transport } from "./sync-engine";
 import { deepEqual, mergeStates } from "./sync-merge";
+import { applyWater, MAX_WATER_ML, type WaterEntry } from "./water";
 
 export interface SetLog {
   kg: string;
@@ -43,9 +44,12 @@ export interface SleepRecoveryEntry {
   fatigue: number;
 }
 export interface AppState {
-  version: 9;
+  version: 10;
   /** ml de agua por fecha (YYYY-MM-DD) */
+  /** Totales antiguos por día (anteriores al registro por vaso). */
   water: Record<string, number>;
+  /** Agua registrada vaso por vaso: fecha → registros con identificador propio. */
+  waterLog: Record<string, WaterEntry[]>;
   /** fecha → id de ejercicio → series registradas */
   workoutLogs: Record<string, Record<string, SetLog[]>>;
   weights: WeightEntry[];
@@ -62,7 +66,7 @@ export interface AppState {
   profile?: UserProfile;
 }
 
-const emptyState = (): AppState => ({ version: 9, water: {}, workoutLogs: {}, weights: [], bodyMeasurements: [], nutritionEntries: {}, shopping: {}, sessions: {}, sleepRecovery: {} });
+const emptyState = (): AppState => ({ version: 10, water: {}, waterLog: {}, workoutLogs: {}, weights: [], bodyMeasurements: [], nutritionEntries: {}, shopping: {}, sessions: {}, sleepRecovery: {} });
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
@@ -70,6 +74,20 @@ const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "obj
 function sanitize(raw: unknown): AppState {
   const base = emptyState();
   if (!isRecord(raw)) return base;
+  if (isRecord(raw.waterLog)) {
+    for (const [date, entries] of Object.entries(raw.waterLog)) {
+      if (!Array.isArray(entries)) continue;
+      const seen = new Set<string>();
+      const clean: WaterEntry[] = [];
+      for (const e of entries.slice(0, 200)) {
+        if (!isRecord(e) || typeof e.id !== "string" || e.id.length === 0 || e.id.length > 80 || seen.has(e.id)) continue;
+        if (typeof e.ml !== "number" || !Number.isFinite(e.ml) || e.ml < 1 || e.ml > MAX_WATER_ML) continue;
+        seen.add(e.id);
+        clean.push({ id: e.id, ml: Math.round(e.ml) });
+      }
+      if (clean.length) base.waterLog[date] = clean;
+    }
+  }
   if (isRecord(raw.water)) {
     for (const [k, v] of Object.entries(raw.water)) if (typeof v === "number" && Number.isFinite(v)) base.water[k] = v;
   }
@@ -462,8 +480,8 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
 
   const addWater = useCallback((date: string, ml: number) => {
     setState((s) => {
-      const next = Math.min(6000, Math.max(0, (s.water[date] ?? 0) + ml));
-      return { ...s, water: { ...s.water, [date]: next } };
+      const next = applyWater(s, date, ml);
+      return next === s ? s : { ...s, water: next.water, waterLog: next.waterLog };
     });
   }, []);
 
@@ -563,7 +581,7 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
   const importJSON = useCallback((text: string) => {
     try {
       const parsed: unknown = JSON.parse(text);
-      if (!isRecord(parsed) || ![5, 6, 7, 8, 9].includes(parsed.version as number)) return false;
+      if (!isRecord(parsed) || ![5, 6, 7, 8, 9, 10].includes(parsed.version as number)) return false;
       const incoming = sanitize(parsed);
       // Una copia antigua sin perfil no debe borrar el perfil actual.
       setState((current) => ({ ...incoming, profile: incoming.profile ?? current.profile }));

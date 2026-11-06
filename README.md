@@ -125,7 +125,8 @@ Tus datos viven en tu navegador y se sincronizan con tu fila de Supabase. Para q
 - **Fusión de 3 vías** (`src/lib/sync-merge.ts`): se compara con el último estado sincronizado. Se conservan los cambios de ambos dispositivos, incluidas las eliminaciones; el agua de dos dispositivos se suma; el perfil nunca mezcla campos de dos versiones; si ambos editan exactamente el mismo dato, gana el dispositivo en uso.
 - **Sin conexión:** los cambios se guardan en el dispositivo, se reintentan solos y se fusionan al reconectar. Si la primera conexión con la nube falla, no se sube nada.
 - **Al volver a la app** (o al recuperar internet) se traen los cambios del otro dispositivo.
-- **Limitación conocida:** si dos dispositivos suman exactamente la misma cantidad de agua a la vez, sin haberse actualizado entre medias, se cuenta una sola vez.
+- **Agua vaso por vaso:** cada vaso se guarda como un registro con su propio identificador (`waterLog`). Dos dispositivos que suman exactamente lo mismo a la vez son dos vasos, y un guardado reenviado no se cuenta dos veces. Los totales de agua anteriores a este cambio siguen sumándose.
+- **Páginas desactualizadas:** si alguien tiene abierta una versión antigua de la app, el servidor rechaza su guardado (409 `outdated`) para que no borre los registros nuevos; basta con recargar la página.
 
 ## Privacidad y control de datos
 

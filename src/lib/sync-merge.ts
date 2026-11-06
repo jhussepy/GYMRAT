@@ -34,7 +34,7 @@ const ATOMIC = new Set(["profile"]);
 function listKey(path: string[]): string | null {
   const p = path.join(".");
   if (p === "weights" || p === "bodyMeasurements") return "date";
-  if (/^nutritionEntries\.[^.]+$/.test(p)) return "id";
+  if (/^nutritionEntries\.[^.]+$/.test(p) || /^waterLog\.[^.]+$/.test(p)) return "id";
   return null;
 }
 
@@ -77,8 +77,9 @@ function mergeSetList(path: string[], base: unknown, local: unknown[], remote: u
 function merge3(path: string[], base: unknown, local: unknown, remote: unknown): unknown {
   // Si ambos lados ya son idénticos se da por hecho que es el mismo cambio. Esto evita contar dos veces
   // un guardado cuya respuesta se perdió, o los datos de quien abre la app sin referencia previa.
-  // Limitación conocida: si dos dispositivos suman exactamente la misma cantidad de agua a la vez,
-  // desde la misma base y sin haberse actualizado entre medias, se cuenta una sola vez.
+  // El agua nueva se guarda vaso por vaso (cada uno con su identificador), así que dos vasos iguales
+  // en dos dispositivos son dos registros distintos y no se confunden con un reenvío. Solo los totales
+  // antiguos (`water`) siguen siendo un contador.
   if (deepEqual(local, remote)) return local;
   if (deepEqual(local, base)) return remote;
   if (deepEqual(remote, base)) return local;
@@ -110,7 +111,7 @@ function merge3(path: string[], base: unknown, local: unknown, remote: unknown):
     const key = listKey(path);
     if (key) {
       const merged = mergeKeyedList(path, key, base, listLocal, listRemote);
-      return merged.length === 0 && path[0] === "nutritionEntries" ? undefined : merged;
+      return merged.length === 0 && (path[0] === "nutritionEntries" || path[0] === "waterLog") ? undefined : merged;
     }
     if (isSetList(path)) {
       const merged = mergeSetList(path, base, listLocal, listRemote);

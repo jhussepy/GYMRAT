@@ -71,8 +71,28 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "El estado de GYMRAT no es válido." }, { status: 400 });
   }
   const state = body.state as Record<string, unknown>;
-  if (![5, 6, 7, 8, 9].includes(state.version as number)) {
+  if (![5, 6, 7, 8, 9, 10].includes(state.version as number)) {
     return NextResponse.json({ error: "La versión de los datos no es compatible." }, { status: 400 });
+  }
+  // Un cliente antiguo (versión < 10) no conoce el agua por vaso: si guardara, borraría esos registros.
+  // Mientras no se actualice la página, se rechaza su guardado y los datos de la nube quedan intactos.
+  if ((state.version as number) < 10) {
+    const query = new URLSearchParams({ select: "state,updated_at", user_id: `eq.${userId}`, limit: "1" });
+    try {
+      const response = await databaseRequest(`gymrat_user_state?${query.toString()}`);
+      if (response.ok) {
+        const [current] = (await response.json()) as Row[];
+        const storedVersion = Number((current?.state as { version?: unknown } | undefined)?.version);
+        if (storedVersion >= 10) {
+          return NextResponse.json(
+            { conflict: true, outdated: true, error: "Actualiza GYMRAT (recarga la página) para seguir guardando.", state: current.state, updatedAt: current.updated_at },
+            { status: 409 },
+          );
+        }
+      }
+    } catch {
+      /* si la lectura falla, el guardado normal informará el error */
+    }
   }
   const conditional = "baseRevision" in body;
   if (conditional && body.baseRevision !== null && !isRevision(body.baseRevision)) {

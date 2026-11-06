@@ -8,6 +8,7 @@ import { planFor } from "@/lib/plan";
 import { addMinutes } from "@/lib/profile";
 import { bioDayFraction, blockMinutes, caffeineAllowed, findBlock, formatDuration, isInBlock, minutesOf, pad2, todayISO } from "@/lib/time";
 import { useProfile, useSchedule, useStore } from "@/lib/store";
+import { waterTotal } from "@/lib/water";
 import { Card, ProgressBar, SectionTitle } from "./ui";
 import { DayDial } from "./DayDial";
 import { useNow } from "./useNow";
@@ -23,7 +24,7 @@ export function ClockTab({ onNavigate }: { onNavigate: (tab: "rutina" | "menu") 
   const current = minute !== null ? findBlock(schedule, minute) : undefined;
   const allowed = minute !== null ? caffeineAllowed(minute, profile.wake, profile.caffeineCutoff) : null;
   const date = now ? todayISO(now) : "";
-  const water = date ? (state.water[date] ?? 0) : 0;
+  const water = date ? waterTotal(state, date) : 0;
   const left = current && minute !== null ? remainingInBlock(current.end, minute) : null;
 
   const dayPlan = now ? planFor(profile.trainingDays, weekdayFromDate(now)) : null;
