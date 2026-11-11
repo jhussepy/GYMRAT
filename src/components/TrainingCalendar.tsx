@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { weekdayFromDate } from "@/lib/config";
-import { planFor } from "@/lib/plan";
+import { planFor } from "@/lib/routine-plan";
 import { useProfile, useStore } from "@/lib/store";
 import { addDays, computeSummary, parseISO, sessionStats, STRENGTH_MET, type SessionStats } from "@/lib/training";
 import { todayISO } from "@/lib/time";

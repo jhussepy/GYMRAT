@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { ChevronRight, Droplets, Minus, Plus } from "lucide-react";
 import { weekdayFromDate } from "@/lib/config";
 import { CATEGORY_COLOR, QUICK_TIPS } from "@/lib/data";
-import { planFor } from "@/lib/plan";
+import { planFor } from "@/lib/routine-plan";
 import { addMinutes } from "@/lib/profile";
 import { bioDayFraction, blockMinutes, caffeineAllowed, findBlock, formatDuration, isInBlock, minutesOf, pad2, todayISO } from "@/lib/time";
 import { useProfile, useSchedule, useStore } from "@/lib/store";

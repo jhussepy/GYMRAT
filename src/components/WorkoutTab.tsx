@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Timer } from "lucide-react";
 import { WEEKDAYS, weekdayFromDate, type Weekday } from "@/lib/config";
 import type { Exercise } from "@/lib/data";
-import { trainingPlan } from "@/lib/plan";
+import { trainingPlan } from "@/lib/routine-plan";
+import { exerciseFor, type RoutineDay, type RoutineExercise } from "@/lib/routines";
+import { RoutineEditor } from "./RoutineEditor";
 import { addMinutes } from "@/lib/profile";
 import { useProfile, useStore, type SetLog } from "@/lib/store";
 import { todayISO } from "@/lib/time";
@@ -54,10 +56,13 @@ function progressionGuidance(ex: Exercise, previous: SetLog[] | undefined): stri
 }
 
 export function WorkoutTab() {
-  const { state, setSetLog } = useStore();
+  const { state, setSetLog, saveRoutine, setHomeMode } = useStore();
   const { startRest } = useRestTimer();
   const profile = useProfile();
-  const plans = useMemo(() => trainingPlan(profile.trainingDays), [profile.trainingDays]);
+  const appState = state;
+  const [editing, setEditing] = useState(false);
+  const plans = useMemo(() => trainingPlan(profile.trainingDays, appState.routines), [profile.trainingDays, appState.routines]);
+  const homeMode = appState.homeMode === true;
   const [day, setDay] = useState<Weekday>(plans[0].day);
   const [today, setToday] = useState("");
 
@@ -96,9 +101,48 @@ export function WorkoutTab() {
   const totalSets = exercises.reduce((n, e) => n + e.sets, 0);
   const doneSets = exercises.reduce((n, e) => n + (todayLog[e.id] ?? []).slice(0, e.sets).filter((s) => s.reps.trim() !== "").length, 0);
 
+  const customized = !!appState.routines?.[plan.routine];
+  const baseRoutine: RoutineDay = { day: plan.routine, focus: plan.focus, exercises: plan.exercises };
+
+  if (editing) {
+    return (
+      <RoutineEditor
+        base={plan.routine}
+        current={baseRoutine}
+        customized={customized}
+        onSave={(r) => {
+          saveRoutine(plan.routine, r);
+          setEditing(false);
+        }}
+        onRestore={() => {
+          saveRoutine(plan.routine, null);
+          setEditing(false);
+        }}
+        onClose={() => setEditing(false)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <Card>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={homeMode}
+            onClick={() => setHomeMode(!homeMode)}
+            className={`inline-flex min-h-11 items-center gap-3 rounded-xl border px-4 text-sm transition-colors duration-200 ${homeMode ? "border-flame bg-flame/10 text-chalk" : "border-line text-muted hover:text-chalk"}`}
+          >
+            <span className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${homeMode ? "bg-flame" : "bg-line"}`} aria-hidden>
+              <span className={`inline-block h-5 w-5 rounded-full bg-white transition-transform ${homeMode ? "translate-x-5" : "translate-x-0.5"}`} />
+            </span>
+            Modo en casa
+          </button>
+          <button type="button" onClick={() => setEditing(true)} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line px-4 text-sm transition-colors duration-200 hover:border-flame/50 hover:bg-raised">
+            Editar rutina
+          </button>
+        </div>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="font-display text-xl">Entrenamiento · {plan.day}</h2>
@@ -123,15 +167,16 @@ export function WorkoutTab() {
 
       <div className="space-y-4">
         {exercises.map((ex, i) => (
-          <ExerciseCard key={ex.id} ex={ex} index={i} logs={todayLog[ex.id] ?? []} prev={previous(ex.id)} disabled={!today} onChange={(idx, field, value) => setSetLog(today, ex.id, idx, field, value)} onRest={() => startRest(90)} />
+          <ExerciseCard key={ex.id} ex={ex} home={homeMode} index={i} logs={todayLog[ex.id] ?? []} prev={previous(ex.id)} disabled={!today} onChange={(idx, field, value) => setSetLog(today, ex.id, idx, field, value)} onRest={() => startRest(90)} />
         ))}
       </div>
     </div>
   );
 }
 
-function ExerciseCard({ ex, index, logs, prev, disabled, onChange, onRest }: { ex: Exercise; index: number; logs: SetLog[]; prev?: SetLog[]; disabled: boolean; onChange: (i: number, f: keyof SetLog, v: string) => void; onRest: () => void }) {
+function ExerciseCard({ ex, home, index, logs, prev, disabled, onChange, onRest }: { ex: RoutineExercise; home: boolean; index: number; logs: SetLog[]; prev?: SetLog[]; disabled: boolean; onChange: (i: number, f: keyof SetLog, v: string) => void; onRest: () => void }) {
   const cardio = ex.type === "cardio";
+  const shown = exerciseFor(ex, home);
   const guidance = progressionGuidance(ex, prev);
 
   return (
@@ -139,9 +184,10 @@ function ExerciseCard({ ex, index, logs, prev, disabled, onChange, onRest }: { e
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-sm text-muted">
-            Ejercicio {index + 1} · {cardio ? ex.reps : `${ex.sets} series de ${ex.reps}`}
+            Ejercicio {index + 1} · {cardio ? shown.reps : `${ex.sets} series de ${shown.reps}`}
           </p>
-          <h3 className="font-medium">{ex.name}</h3>
+          <h3 className="font-medium">{shown.name}</h3>
+          {home && ex.home && <p className="mt-0.5 text-xs text-flame">Modo en casa · en máquina sería: {ex.name}</p>}
           <p className="mt-0.5 text-sm text-muted">En hora punta: {ex.alt}</p>
         </div>
       </div>
@@ -157,11 +203,11 @@ function ExerciseCard({ ex, index, logs, prev, disabled, onChange, onRest }: { e
             <div key={i} className="grid grid-cols-[auto_1fr_1fr_auto] items-center gap-2">
               <span className="w-14 text-sm text-muted">{cardio ? "Hecho" : `Serie ${i + 1}`}</span>
               {cardio ? (
-                <input type="number" inputMode="numeric" min={0} aria-label={`Minutos de ${ex.name}`} placeholder={p?.reps || "min"} value={log.reps} disabled={disabled} onChange={(e) => onChange(i, "reps", e.target.value)} className={`${inputCls} col-span-2`} />
+                <input type="number" inputMode="numeric" min={0} aria-label={`Minutos de ${shown.name}`} placeholder={p?.reps || "min"} value={log.reps} disabled={disabled} onChange={(e) => onChange(i, "reps", e.target.value)} className={`${inputCls} col-span-2`} />
               ) : (
                 <>
-                  <input type="number" inputMode="decimal" min={0} step="0.5" aria-label={`Peso en kg, serie ${i + 1} de ${ex.name}`} placeholder={p?.kg ? `${p.kg} kg` : "kg"} value={log.kg} disabled={disabled} onChange={(e) => onChange(i, "kg", e.target.value)} className={inputCls} />
-                  <input type="number" inputMode="numeric" min={0} aria-label={`Repeticiones, serie ${i + 1} de ${ex.name}`} placeholder={p?.reps ? `${p.reps} reps` : "reps"} value={log.reps} disabled={disabled} onChange={(e) => onChange(i, "reps", e.target.value)} className={inputCls} />
+                  <input type="number" inputMode="decimal" min={0} step="0.5" aria-label={`Peso en kg, serie ${i + 1} de ${shown.name}`} placeholder={p?.kg ? `${p.kg} kg` : "kg"} value={log.kg} disabled={disabled} onChange={(e) => onChange(i, "kg", e.target.value)} className={inputCls} />
+                  <input type="number" inputMode="numeric" min={0} aria-label={`Repeticiones, serie ${i + 1} de ${shown.name}`} placeholder={p?.reps ? `${p.reps} reps` : "reps"} value={log.reps} disabled={disabled} onChange={(e) => onChange(i, "reps", e.target.value)} className={inputCls} />
                 </>
               )}
               <button onClick={onRest} aria-label="Iniciar descanso de 90 segundos" className="flex h-11 w-11 items-center justify-center rounded-xl border border-line text-muted transition-colors duration-200 hover:bg-raised hover:text-chalk">

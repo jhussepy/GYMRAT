@@ -1,6 +1,6 @@
 import { weekdayFromDate } from "./config";
 import { WORKOUTS, type Exercise } from "./data";
-import { DEFAULT_TRAINING_DAYS, planFor } from "./plan";
+import { DEFAULT_TRAINING_DAYS, planFor } from "./routine-plan";
 import type { AppState, WeightEntry } from "./store";
 import { todayISO } from "./time";
 
@@ -14,6 +14,14 @@ const MINUTES_PER_SET = 2.25;
 const WARMUP_MIN = 8;
 
 const EXERCISES = new Map<string, Exercise>(Object.values(WORKOUTS).flat().map((e) => [e.id, e]));
+/** Ejercicios que el usuario ha creado o editado: se leen desde su rutina guardada, no desde la plantilla. */
+function exerciseById(id: string, state: AppState): Exercise | undefined {
+  for (const day of Object.values(state.routines ?? {})) {
+    const found = day.exercises.find((e) => e.id === id);
+    if (found) return { id: found.id, name: found.name, sets: found.sets, reps: found.reps, alt: found.alt, type: found.type };
+  }
+  return EXERCISES.get(id);
+}
 
 const num = (v: string | undefined): number => {
   const n = parseFloat((v ?? "").replace(",", "."));
@@ -68,7 +76,7 @@ export function sessionStats(date: string, state: AppState): SessionStats {
   let cardioMin = 0;
   let cardioKcal = 0;
   for (const [id, sets] of Object.entries(log)) {
-    const ex = EXERCISES.get(id);
+    const ex = exerciseById(id, state);
     if (!ex) continue;
     if (ex.type === "cardio") {
       const min = num(sets[0]?.reps);
@@ -100,7 +108,7 @@ export function sessionStats(date: string, state: AppState): SessionStats {
     kcalEstimated = (STRENGTH_MET * weight * strengthMin) / 60 + cardioKcal;
   } else if (manual) {
     // Sin series registradas: se asume la sesión completa del plan de ese día.
-    const plan = planFor(state.profile?.trainingDays ?? DEFAULT_TRAINING_DAYS, weekdayFromDate(parseISO(date)));
+    const plan = planFor(state.profile?.trainingDays ?? DEFAULT_TRAINING_DAYS, weekdayFromDate(parseISO(date)), state.routines);
     if (plan) {
       for (const ex of plan.exercises) {
         if (ex.type === "cardio") {

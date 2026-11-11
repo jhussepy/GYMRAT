@@ -135,3 +135,11 @@ Tus datos viven en tu navegador y se sincronizan con tu fila de Supabase. Para q
 - **Eliminar mi cuenta** (`DELETE /api/account`, requiere escribir ELIMINAR): borra primero los datos de Supabase y, solo si salió bien, la cuenta en Clerk, para que nunca queden datos huérfanos. Si falla el segundo paso se avisa y se puede reintentar.
 - **Páginas legales:** `/privacidad` y `/terminos`, enlazadas desde la portada, el registro y la app. Configura `NEXT_PUBLIC_LEGAL_NAME` y `NEXT_PUBLIC_CONTACT_EMAIL` para mostrar quién es el responsable y un correo de contacto. Revisa el texto con un profesional legal antes de publicarlo, sobre todo si tienes usuarios en la Unión Europea.
 - **Si un usuario borra su cuenta desde el panel de Clerk** (y no desde la app), su fila de Supabase no se elimina sola. Para cubrirlo, añade en Clerk un webhook `user.deleted` que borre esa fila.
+
+## Rutinas editables y modo en casa
+
+- **Editar rutina** (pestaña Rutina): puedes añadir, quitar y reordenar ejercicios, y cambiar su nombre, tipo, series, repeticiones y alternativa. Restaurar devuelve la plantilla original.
+- **Las rutinas se guardan por base** (Lunes…Sábado). Si tu semana usa la misma rutina en más de un día, el cambio aplica a todos ellos, y la pantalla lo avisa.
+- **El historial no se pierde** al editar: cada ejercicio tiene un identificador estable, y las series registradas apuntan a él.
+- **Modo en casa:** cada ejercicio puede tener una versión sin equipo (por ejemplo, flexiones en lugar de press en máquina). Activa el interruptor para verla; se muestra el nombre de la máquina como referencia.
+- Los datos se guardan en la versión 11 del estado. Las páginas anteriores no pueden sobrescribirlos (ver el apartado de agua y páginas desactualizadas).

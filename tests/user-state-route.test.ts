@@ -126,18 +126,18 @@ describe("validaciones y compatibilidad", () => {
 });
 
 describe("protección de los datos nuevos frente a páginas desactualizadas", () => {
-  it("un cliente antiguo (versión 9) no puede sobrescribir datos de la versión 10", async () => {
-    const created = await json(await put({ state: { version: 10, water: {}, waterLog: { d: [{ id: "a", ml: 250 }] } }, baseRevision: null }));
+  it("un cliente antiguo (versión 10) no puede sobrescribir datos de la versión 11", async () => {
+    const created = await json(await put({ state: { version: 11, water: {}, waterLog: { d: [{ id: "a", ml: 250 }] }, routines: {} }, baseRevision: null }));
     const res = await put({ state: state({ water: { d: 100 } }), baseRevision: created.updatedAt });
     const body = await json(res);
     expect(res.status).toBe(409);
     expect(body.outdated).toBe(true);
-    expect(rows.get("user_a")?.state).toMatchObject({ version: 10, waterLog: { d: [{ id: "a", ml: 250 }] } });
+    expect(rows.get("user_a")?.state).toMatchObject({ version: 11, waterLog: { d: [{ id: "a", ml: 250 }] } });
   });
-  it("un cliente antiguo sin revisión tampoco puede pisar datos de la versión 10", async () => {
-    await put({ state: { version: 10, water: {}, waterLog: { d: [{ id: "a", ml: 250 }] } }, baseRevision: null });
+  it("un cliente antiguo sin revisión tampoco puede pisar datos de la versión 11", async () => {
+    await put({ state: { version: 11, water: {}, waterLog: { d: [{ id: "a", ml: 250 }] }, routines: {} }, baseRevision: null });
     expect((await put({ state: state() })).status).toBe(409);
-    expect(rows.get("user_a")?.state).toMatchObject({ version: 10 });
+    expect(rows.get("user_a")?.state).toMatchObject({ version: 11 });
   });
   it("un cliente antiguo sí puede guardar mientras la nube sigue en una versión anterior", async () => {
     const created = await json(await put({ state: state({ water: { d: 1 } }), baseRevision: null }));
