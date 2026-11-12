@@ -9,6 +9,13 @@ const description = "GYMRAT reúne tus entrenamientos, medidas corporales, nutri
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
+  manifest: "/manifest.webmanifest",
+  applicationName: "GYMRAT",
+  appleWebApp: { capable: true, title: "GYMRAT", statusBarStyle: "black-translucent" },
+  icons: {
+    icon: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   title: "GYMRAT · Entrena, registra y evoluciona",
   description,
   openGraph: {
@@ -41,6 +48,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" data-theme="dark" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if("serviceWorker"in navigator&&(location.protocol==="https:"||location.hostname==="localhost")){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){})})}`,
+          }}
+        />
       </head>
       <body className="min-h-screen font-sans antialiased">
         {clerkPublishableKey ? (

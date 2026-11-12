@@ -13,6 +13,7 @@ import { ProgressTab } from "./ProgressTab";
 import { ThemeToggle } from "./ThemeToggle";
 import { ProfileWizard } from "./ProfileWizard";
 import { ConsentScreen } from "./ConsentScreen";
+import { useReminderLoop } from "./RemindersCard";
 import Link from "next/link";
 import { UserRound } from "lucide-react";
 
@@ -53,6 +54,7 @@ function Gate() {
 }
 
 function Shell() {
+  useReminderLoop();
   const [tab, setTab] = useState<TabId>("dia");
   const { showTimer } = useRestTimer();
   const { ready, cloudSyncStatus, cloudSyncMessage } = useStore();

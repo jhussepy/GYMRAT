@@ -8,6 +8,7 @@ import { EMPTY_META, isDirty, pullState, pushState, reconcileOnLoad, type Codec,
 import { deepEqual, mergeStates } from "./sync-merge";
 import { applyWater, MAX_WATER_ML, type WaterEntry } from "./water";
 import { sanitizeRoutineDay, type RoutineDay, type Routines } from "./routines";
+import { parseSettings, type ReminderId, type ReminderSettings } from "./reminders";
 
 export interface SetLog {
   kg: string;
@@ -45,7 +46,7 @@ export interface SleepRecoveryEntry {
   fatigue: number;
 }
 export interface AppState {
-  version: 11;
+  version: 12;
   /** ml de agua por fecha (YYYY-MM-DD) */
   /** Totales antiguos por día (anteriores al registro por vaso). */
   water: Record<string, number>;
@@ -67,11 +68,15 @@ export interface AppState {
   routines?: Routines;
   /** Modo en casa: muestra los sustitutos sin máquina. */
   homeMode?: boolean;
+  /** Recordatorios que el usuario activó. */
+  reminders?: ReminderSettings;
+  /** Último día en que cada recordatorio sonó (evita repetirlo). */
+  remindersFired?: Partial<Record<ReminderId, string>>;
   /** Datos personales y metas del usuario. Sin perfil, la app muestra el registro inicial. */
   profile?: UserProfile;
 }
 
-const emptyState = (): AppState => ({ version: 11, water: {}, waterLog: {}, workoutLogs: {}, weights: [], bodyMeasurements: [], nutritionEntries: {}, shopping: {}, sessions: {}, sleepRecovery: {} });
+const emptyState = (): AppState => ({ version: 12, water: {}, waterLog: {}, workoutLogs: {}, weights: [], bodyMeasurements: [], nutritionEntries: {}, shopping: {}, sessions: {}, sleepRecovery: {} });
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
@@ -88,6 +93,17 @@ function sanitize(raw: unknown): AppState {
     if (Object.keys(routines).length) base.routines = routines;
   }
   if (raw.homeMode === true) base.homeMode = true;
+  if (isRecord(raw.reminders)) {
+    const parsed = parseSettings(raw.reminders);
+    if (parsed.enabled.length) base.reminders = parsed;
+  }
+  if (isRecord(raw.remindersFired)) {
+    const fired: Partial<Record<ReminderId, string>> = {};
+    for (const [k, v] of Object.entries(raw.remindersFired)) {
+      if (typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v)) fired[k as ReminderId] = v;
+    }
+    if (Object.keys(fired).length) base.remindersFired = fired;
+  }
   if (isRecord(raw.waterLog)) {
     for (const [date, entries] of Object.entries(raw.waterLog)) {
       if (!Array.isArray(entries)) continue;
@@ -206,6 +222,10 @@ interface StoreValue {
   saveRoutine: (base: Weekday, routine: RoutineDay | null) => void;
   /** Activa o desactiva el modo en casa. */
   setHomeMode: (on: boolean) => void;
+  /** Activa o desactiva un recordatorio. */
+  setReminder: (id: ReminderId, on: boolean) => void;
+  /** Marca un recordatorio como sonado hoy. */
+  markReminderFired: (id: ReminderId, date: string) => void;
   /** Actualiza las marcas de un día. kcalReal null borra el valor. */
   setSession: (date: string, patch: { manual?: boolean; kcalReal?: number | null }) => void;
   saveSleepRecovery: (date: string, entry: SleepRecoveryEntry) => void;
@@ -576,6 +596,20 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
     setState((s) => ({ ...s, homeMode: on || undefined }));
   }, []);
 
+  const setReminder = useCallback((id: ReminderId, on: boolean) => {
+    setState((s) => {
+      const current = new Set(s.reminders?.enabled ?? []);
+      if (on) current.add(id);
+      else current.delete(id);
+      const enabled = [...current];
+      return { ...s, reminders: enabled.length ? { enabled } : undefined };
+    });
+  }, []);
+
+  const markReminderFired = useCallback((id: ReminderId, date: string) => {
+    setState((s) => ({ ...s, remindersFired: { ...(s.remindersFired ?? {}), [id]: date } }));
+  }, []);
+
   const setSession = useCallback((date: string, patch: { manual?: boolean; kcalReal?: number | null }) => {
     setState((s) => {
       const cur: SessionMeta = { ...s.sessions[date] };
@@ -612,7 +646,7 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
   const importJSON = useCallback((text: string) => {
     try {
       const parsed: unknown = JSON.parse(text);
-      if (!isRecord(parsed) || ![5, 6, 7, 8, 9, 10, 11].includes(parsed.version as number)) return false;
+      if (!isRecord(parsed) || ![5, 6, 7, 8, 9, 10, 11, 12].includes(parsed.version as number)) return false;
       const incoming = sanitize(parsed);
       // Una copia antigua sin perfil no debe borrar el perfil actual.
       setState((current) => ({ ...incoming, profile: incoming.profile ?? current.profile }));
@@ -637,8 +671,8 @@ export function StoreProvider({ children, userId }: { children: ReactNode; userI
   }, [userId]);
 
   const value = useMemo<StoreValue>(
-    () => ({ userId, state, ready, cloudSyncStatus, cloudSyncMessage, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, saveRoutine, setHomeMode, setSession, saveSleepRecovery, saveProfile, exportJSON, importJSON, resetAll, eraseAllData }),
-    [userId, state, ready, cloudSyncStatus, cloudSyncMessage, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, saveRoutine, setHomeMode, setSession, saveSleepRecovery, saveProfile, exportJSON, importJSON, resetAll, eraseAllData],
+    () => ({ userId, state, ready, cloudSyncStatus, cloudSyncMessage, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, saveRoutine, setHomeMode, setReminder, markReminderFired, setSession, saveSleepRecovery, saveProfile, exportJSON, importJSON, resetAll, eraseAllData }),
+    [userId, state, ready, cloudSyncStatus, cloudSyncMessage, addWater, setSetLog, saveWeight, saveBodyMeasurement, removeBodyMeasurement, removeWeight, toggleShopping, addNutritionEntry, removeNutritionEntry, saveRoutine, setHomeMode, setReminder, markReminderFired, setSession, saveSleepRecovery, saveProfile, exportJSON, importJSON, resetAll, eraseAllData],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

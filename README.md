@@ -143,3 +143,11 @@ Tus datos viven en tu navegador y se sincronizan con tu fila de Supabase. Para q
 - **El historial no se pierde** al editar: cada ejercicio tiene un identificador estable, y las series registradas apuntan a él.
 - **Modo en casa:** cada ejercicio puede tener una versión sin equipo (por ejemplo, flexiones en lugar de press en máquina). Activa el interruptor para verla; se muestra el nombre de la máquina como referencia.
 - Los datos se guardan en la versión 11 del estado. Las páginas anteriores no pueden sobrescribirlos (ver el apartado de agua y páginas desactualizadas).
+
+## App instalable (PWA) y recordatorios
+
+- **Instalable:** en Android o en un escritorio, el navegador ofrece «Instalar GYMRAT» y la app se abre sin la barra del navegador. En iPhone: Compartir → «Añadir a pantalla de inicio».
+- **Sin conexión:** el navegador guarda solo los archivos estáticos (íconos, manifiesto y el código de la app). Las páginas privadas y la API **nunca** se guardan, así que sin conexión no se muestran datos de nadie: falla en limpio.
+- **Recordatorios:** entreno (30 min antes), agua (a mitad de jornada), comidas, pesaje (sábados) y sueño (30 min antes de dormir). Se activan en Progreso → Recordatorios, se guardan en la cuenta y se sincronizan.
+- **Límite conocido:** los avisos llegan **mientras la app está abierta** o en el navegador de escritorio. Las notificaciones con la app cerrada requieren un servicio de notificaciones push, que no está incluido todavía.
+- **Versión 12** del estado: las páginas antiguas no pueden sobrescribir los recordatorios (ver el apartado de páginas desactualizadas).

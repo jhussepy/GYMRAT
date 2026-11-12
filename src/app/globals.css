@@ -184,6 +184,11 @@ textarea {
     border-color: rgb(var(--line) / 0.95);
   }
 }
+/* Al ir a una sección, su título no queda tapado por la cabecera fija. */
+html {
+  scroll-padding-top: 5.5rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

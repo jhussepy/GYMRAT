@@ -132,14 +132,14 @@ describe("editar rutina", () => {
 });
 
 describe("guardado y compatibilidad", () => {
-  it("la rutina personalizada se sube a la nube con versión 11", async () => {
+  it("la rutina personalizada se sube a la nube con la versión actual", async () => {
     seed();
     await mount();
     fireEvent.click(await screen.findByRole("button", { name: /editar rutina/i }));
     fireEvent.click(screen.getByRole("button", { name: /guardar rutina/i }));
     await waitFor(() => {
       const cloud = fakeCloud.state("u") as { version?: number; routines?: Record<string, unknown> } | undefined;
-      expect(cloud?.version).toBe(11);
+      expect(cloud?.version).toBe(12);
       expect(cloud?.routines?.Lunes).toBeDefined();
     }, { timeout: 4000 });
   });
