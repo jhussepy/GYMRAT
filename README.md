@@ -151,3 +151,11 @@ Tus datos viven en tu navegador y se sincronizan con tu fila de Supabase. Para q
 - **Recordatorios:** entreno (30 min antes), agua (a mitad de jornada), comidas, pesaje (sábados) y sueño (30 min antes de dormir). Se activan en Progreso → Recordatorios, se guardan en la cuenta y se sincronizan.
 - **Límite conocido:** los avisos llegan **mientras la app está abierta** o en el navegador de escritorio. Las notificaciones con la app cerrada requieren un servicio de notificaciones push, que no está incluido todavía.
 - **Versión 12** del estado: las páginas antiguas no pueden sobrescribir los recordatorios (ver el apartado de páginas desactualizadas).
+
+## Menú adaptativo y lista de compras
+
+- **El menú se calcula para tu meta** (`src/lib/menu-planner.ts`): reparte las calorías entre desayuno, almuerzo, merienda y cena, pone la proteína en la fuente principal de cada comida, y ajusta las porciones hasta cuadrar con tu meta de calorías (±40 kcal) y de proteína (±5 g).
+- **Alimentos del catálogo** (`src/lib/food-catalog.ts`): los valores son orientativos por 100 g y dependen de la preparación indicada. Cámbialos ahí si pesas otros productos.
+- **Lista de compras calculada** del mismo menú, lunes a viernes, con 10 % extra por desperdicio. Cada línea es un alimento, así las marcas que ya hiciste se conservan.
+- **Los tápers fijos y el bloque de ejemplo se eliminaron**: el menú ya no depende de valores escritos a mano.
+- **Límite conocido:** en metas muy altas (cerca de 3000 kcal con mucha proteína) el ajuste no siempre cuadra la proteína al gramo: la diferencia se muestra, no se oculta.
