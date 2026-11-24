@@ -6,6 +6,7 @@ import { WEEKDAYS, weekdayFromDate, type Weekday } from "@/lib/config";
 import type { Exercise } from "@/lib/data";
 import { trainingPlan } from "@/lib/routine-plan";
 import { exerciseFor, type RoutineDay, type RoutineExercise } from "@/lib/routines";
+import { historyBefore, isNewRecord, recordsFor } from "@/lib/records";
 import { RoutineEditor } from "./RoutineEditor";
 import { addMinutes } from "@/lib/profile";
 import { useProfile, useStore, type SetLog } from "@/lib/store";
@@ -98,6 +99,12 @@ export function WorkoutTab() {
     };
   }, [state.workoutLogs, today]);
 
+  // Récord de cada ejercicio hasta ayer: la serie de hoy se compara contra eso, nunca contra sí misma.
+  const recordFor = useMemo(() => {
+    const before = historyBefore(state.workoutLogs, today);
+    return (id: string) => recordsFor(id, before);
+  }, [state.workoutLogs, today]);
+
   const totalSets = exercises.reduce((n, e) => n + e.sets, 0);
   const doneSets = exercises.reduce((n, e) => n + (todayLog[e.id] ?? []).slice(0, e.sets).filter((s) => s.reps.trim() !== "").length, 0);
 
@@ -167,14 +174,14 @@ export function WorkoutTab() {
 
       <div className="space-y-4">
         {exercises.map((ex, i) => (
-          <ExerciseCard key={ex.id} ex={ex} home={homeMode} index={i} logs={todayLog[ex.id] ?? []} prev={previous(ex.id)} disabled={!today} onChange={(idx, field, value) => setSetLog(today, ex.id, idx, field, value)} onRest={() => startRest(90)} />
+          <ExerciseCard key={ex.id} ex={ex} home={homeMode} index={i} logs={todayLog[ex.id] ?? []} prev={previous(ex.id)} record={recordFor(ex.id)} disabled={!today} onChange={(idx, field, value) => setSetLog(today, ex.id, idx, field, value)} onRest={() => startRest(90)} />
         ))}
       </div>
     </div>
   );
 }
 
-function ExerciseCard({ ex, home, index, logs, prev, disabled, onChange, onRest }: { ex: RoutineExercise; home: boolean; index: number; logs: SetLog[]; prev?: SetLog[]; disabled: boolean; onChange: (i: number, f: keyof SetLog, v: string) => void; onRest: () => void }) {
+function ExerciseCard({ ex, home, index, logs, prev, record, disabled, onChange, onRest }: { ex: RoutineExercise; home: boolean; index: number; logs: SetLog[]; prev?: SetLog[]; record: ReturnType<typeof recordsFor>; disabled: boolean; onChange: (i: number, f: keyof SetLog, v: string) => void; onRest: () => void }) {
   const cardio = ex.type === "cardio";
   const shown = exerciseFor(ex, home);
   const guidance = progressionGuidance(ex, prev);
@@ -210,6 +217,15 @@ function ExerciseCard({ ex, home, index, logs, prev, disabled, onChange, onRest 
                   <input type="number" inputMode="numeric" min={0} aria-label={`Repeticiones, serie ${i + 1} de ${shown.name}`} placeholder={p?.reps ? `${p.reps} reps` : "reps"} value={log.reps} disabled={disabled} onChange={(e) => onChange(i, "reps", e.target.value)} className={inputCls} />
                 </>
               )}
+              {!cardio && log.kg && log.reps && (() => {
+                const hit = isNewRecord(log.kg, log.reps, record);
+                if (!hit.kg && !hit.reps) return <span aria-hidden className="w-5" />;
+                return (
+                  <span role="status" className="rounded-lg bg-amber/15 px-2 py-1 text-[11px] font-semibold text-amber" title="¡Récord personal!">
+                    {hit.kg ? "Récord de peso" : "Récord de reps"}
+                  </span>
+                );
+              })()}
               <button onClick={onRest} aria-label="Iniciar descanso de 90 segundos" className="flex h-11 w-11 items-center justify-center rounded-xl border border-line text-muted transition-colors duration-200 hover:bg-raised hover:text-chalk">
                 <Timer size={16} />
               </button>

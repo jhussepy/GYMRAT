@@ -13,6 +13,8 @@ import { SleepRecoveryCard } from "./SleepRecoveryCard";
 import { ProfileWizard } from "./ProfileWizard";
 import { PrivacyCard } from "./PrivacyCard";
 import { RemindersCard } from "./RemindersCard";
+import { RecordsCard } from "./RecordsCard";
+import { ProgressPhotosCard } from "./ProgressPhotosCard";
 
 export function ProgressTab() {
   const { state, saveWeight, removeWeight, saveProfile, exportJSON, importJSON, resetAll } = useStore();
@@ -214,6 +216,10 @@ export function ProgressTab() {
           </button>
         </div>
       </Card>
+
+      <RecordsCard />
+
+      <ProgressPhotosCard />
 
       <RemindersCard />
 

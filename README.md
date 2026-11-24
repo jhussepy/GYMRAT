@@ -159,3 +159,11 @@ Tus datos viven en tu navegador y se sincronizan con tu fila de Supabase. Para q
 - **Lista de compras calculada** del mismo menú, lunes a viernes, con 10 % extra por desperdicio. Cada línea es un alimento, así las marcas que ya hiciste se conservan.
 - **Los tápers fijos y el bloque de ejemplo se eliminaron**: el menú ya no depende de valores escritos a mano.
 - **Límite conocido:** en metas muy altas (cerca de 3000 kcal con mucha proteína) el ajuste no siempre cuadra la proteína al gramo: la diferencia se muestra, no se oculta.
+
+## Récords personales y fotos de progreso
+
+- **Récords** (Progreso → Récords personales): el mejor peso de cada ejercicio con su fecha, y las mejores repeticiones con ese peso. Se calculan de tu historial de series; los empates se quedan con el primer día en que se lograron.
+- **Aviso de récord** (Rutina): al escribir una serie que supera tu récord anterior aparece «Récord de peso» o «Récord de reps». La comparación usa solo días anteriores a hoy, así una serie nunca se celebra contra sí misma.
+- **Fotos de progreso** (Progreso → Fotos de progreso): se guardan **solo en este navegador** (IndexedDB), comprimidas a 900 px y JPEG. No entran en el estado sincronizado ni en la API, así que no llegan a la nube ni a otras cuentas.
+- Puedes borrar una foto o **todas a la vez** desde la misma tarjeta. Si borras los datos del navegador, las fotos también se pierden: descárgalas antes si las quieres conservar.
+- Antes/después: compara la foto más reciente con la más cercana a una fecha anterior.
